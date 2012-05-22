@@ -166,7 +166,10 @@ def lookup(variable):
     if not is_variable(variable):
         return variable
     ### Strip the '@' for lookup.
-    return POLICY_VARS[variable[1:].lower()]
+    try:
+        return POLICY_VARS[variable[1:].lower()]
+    except KeyError:
+        raise KeyError('No such variable %s defined in policy!' % variable)
 
 
 def is_variable(string):
