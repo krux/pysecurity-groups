@@ -3,6 +3,9 @@
 # Comma-separated list of EC2 regions to manage security groups in.
 regions = us-east-1, us-west-2
 
+# Variable definitions are name = value. Variable references are
+# @name. You cannot reference a variable from within another variable:
+# @HAPPY_PORTS = @SSH_PORT, @WEB_PORT is invalid.
 [VARIABLES]
 home-ip = 192.168.10.10
 office-ips = 10.10.0.1, 10.0.0.2
