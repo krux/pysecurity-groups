@@ -5,3 +5,4 @@
 /share
 /*.egg
 /*.egg-info
+*.pyc
