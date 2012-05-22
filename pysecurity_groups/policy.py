@@ -12,10 +12,6 @@ from operator import concat
 
 POLICY = None
 PROTO_SEPARATOR = ':'
-PROTO_INFO = {'tcp': {'name': 'ports',
-                      'glob': (0,65535)},
-              'icmp': {'name': 'types',
-                       'glob': (-1,-1)}}
 RANGE_SEPARATOR = '-'
 LIST_SEPARATOR = ','
 
@@ -41,7 +37,19 @@ def groups():
 
 
 def proto_spec_name(proto):
-    return PROTO_INFO[proto]['name']
+    """
+    Return the appropriate "name" for the specifier of the given protocol. For
+    tcp, this is 'ports', for icmp, this is 'types'.
+    """
+    return {'tcp': 'ports', 'icmp': 'types'}[proto]
+
+
+def proto_glob(proto):
+    """
+    Return the appropriate wildcard for the given protocol. For tcp, this is
+    (1, 65535), for icmp, this is -1.
+    """
+    return {'tcp': (1, 65535), 'icmp': -1}[proto]
 
 
 def parse_spec(spec):
@@ -67,7 +75,7 @@ def parse_spec(spec):
     proto, spec = spec.split(PROTO_SEPARATOR, 1)
     name = proto_spec_name(proto)
     if spec == '*':
-        return (proto, name, PROTO_INFO[proto]['glob'])
+        return (proto, name, proto_glob(proto))
     elif RANGE_SEPARATOR in spec:
         return (proto, name, tuple([int(item) for item
                                     in spec.split(RANGE_SEPARATOR, 1)]))
