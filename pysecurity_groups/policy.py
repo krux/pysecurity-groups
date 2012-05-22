@@ -6,9 +6,8 @@
 
 """Policy functions for pysecurity-groups."""
 
-from itertools import ifilter, imap, izip, repeat
-from operator import concat, methodcaller
-from pprint import pprint
+from itertools import imap
+from operator import concat
 
 
 POLICY = None
