@@ -6,19 +6,66 @@
 
 """Policy functions for pysecurity-groups."""
 
-from itertools import imap
 from operator import concat
 
 
-POLICY = None
+POLICY_VARS = None
 PROTO_SEPARATOR = ':'
 RANGE_SEPARATOR = '-'
 LIST_SEPARATOR = ','
 
 
+def parse(config):
+    """
+    Parse the CONFIG and return a list the rules it defines.
+
+    Parsed rules are represented by dicts.
+    """
+    ### Set up the variable mapping
+    if config.has_section('VARIABLES'):
+        global POLICY_VARS
+        POLICY_VARS = parse_vars(config.items('VARIABLES'))
+        config.remove_section('VARIABLES')
+
+    return reduce(concat, [rules(group, config) for group in groups(config)])
+
+
+def parse_vars(variables):
+    """
+    Given a list of un-expanded VARIABLES, return a dict mapping variable
+    names to the expanded value of the variable as detailed in expand_value().
+    """
+    return dict([expand_value(varspec) for varspec in variables])
+
+
+def expand_value(varspec):
+    """
+    Given VARSPEC, a tuple of the form (NAME, VALUE), return a tuple of the
+    form (NAME, EXPANDED), where EXPANDED is a (python) list if VALUE
+    specified a (text) list of values.
+    """
+    name, value = varspec
+    if LIST_SEPARATOR in value:
+        value = [val.strip() for val in value.split(LIST_SEPARATOR)]
+    return (name, value)
+
+
+def groups(policy):
+    """
+    Return an iterator over the groups defined by the policy. Group names are
+    returned in canonical form as detailed in canonicalize_group().
+    """
+    for group in [canonicalize_group(group) for group
+                  in [section for section in policy.sections()
+                      if section != 'GLOBAL']]:
+        yield group
+
+
 def canonicalize_group(group):
     """
     Given a group name GROUP, return the group name in canonical form.
+
+    Canonical form is lowercase with white space trimmed from each end.
     """
     ### The GLOBAL group is a special case because it isn't actually a group,
     ### it defines the rules applied to all groups.
@@ -27,114 +74,16 @@ def canonicalize_group(group):
     return group.lower().strip()
 
 
-def groups():
-    """
-    Return an iterator over the groups defined by the policy. Group names are
-    in canonical form.
-    """
-    for group in imap(canonicalize_group,
-                      [section for section in POLICY.sections()
-                       if section != 'GLOBAL']):
-        yield group
-
-
-def proto_spec_name(proto):
-    """
-    Return the appropriate "name" for the specifier of the given protocol. For
-    tcp, this is 'ports', for icmp, this is 'types'.
-    """
-    return {'tcp': 'ports', 'icmp': 'types'}[proto]
-
-
-def proto_glob(proto):
-    """
-    Return the appropriate wildcard for the given protocol. For tcp, this is
-    (1, 65535), for icmp, this is -1.
-    """
-    return {'tcp': (1, 65535), 'icmp': -1}[proto]
-
-
-def parse_spec(spec):
-    """
-    Given a human-friendly rule specifier, return a machine-friendly tuple
-    expanded from that specifier.
-
-    The human-frendly rule specifier is of the form <protocol>:<spec>, where
-    <protocol> is 'tcp' or 'icmp'; <spec> can be one of:
-
-    * A '*' indicating all ports (tcp) or types (icmp).
-    * A range specifying the beginning and end of a range of ports (tcp) or types(icmp).
-    * A comma-separated list of ports (tcp) or types (icmp).
-    * A single port (tcp) or type (icmp).
-
-    The machine-friendly tuple is of the form (<protocol>, <name>, <spec>)
-    where <protocol> is the same as above, <name> is one of 'ports' (tcp) or
-    'types' (icmp), and <spec> is either an integer specifying a port (tcp) or
-    type (icmp), a tuple containing integers specifying the start and end
-    points of a range of ports (tcp) or types (icmp), or a list of integers
-    specifying ports (tcp) or types (icmp).
-    """
-    proto, spec = spec.split(PROTO_SEPARATOR, 1)
-    name = proto_spec_name(proto)
-    if spec == '*':
-        return (proto, name, proto_glob(proto))
-    elif RANGE_SEPARATOR in spec:
-        return (proto, name, tuple([int(item) for item
-                                    in spec.split(RANGE_SEPARATOR, 1)]))
-    elif LIST_SEPARATOR in spec:
-        return (proto, name, [int(item) for item
-                              in spec.split(LIST_SEPARATOR)])
-    else:
-        return (proto, name, int(spec))
-
-
-def rule_dict(source, target, proto, name, spec):
-    """
-    Return a dictionary representing a rule.
-    """
-    return {'source': source,
-            'target': target,
-            'protocol': proto,
-            name: spec}
-
-
-def parse_rule(rule):
-    """
-    Given a rule specifier of the form (<target>, <source>, <spec>), return a
-    dictionary representing that rule, with <spec> expanded according to the
-    rules detailed in parse_spec().
-    """
-    target, source, spec = rule
-    proto, name, spec = parse_spec(spec)
-    return rule_dict(source, target, proto, name, spec)
-
-
-def expand_rule(rule):
-    """
-    Given a rule specifier (as a dict), return a list of rules that specifier
-    expands to. Only rules specifying a list of ports/types are expanded.
-    """
-    name = proto_spec_name(rule['protocol'])
-    if type(rule[name]) in [int, tuple]:
-        return [rule]
-    else:
-        return [rule_dict(rule['source'],
-                          rule['target'],
-                          rule['protocol'],
-                          name,
-                          port) for port in rule[name]]
-
-
-def rules(group):
+def rules(group, policy):
     """
     Given a GROUP, parse the rules for that group from the policy and return
-    them (as a list of dicts). Rules which specify lists of ports are expanded
-    into multiple rules.
+    them (as a list of dicts). Rules which specify lists of sources or ports
+    are expanded into multiple rules. Variables used by the rules are
+    expanded.
     """
-    if not POLICY.has_section(group):
-        raise NameError('No group %s defined in policy!' % group)
-    ### This outer comprehension gives us a list of dicts representing the
-    ### parsed rules for the group.
+    ### This outer comprehension gives us a list of lists of dicts
+    ### representing the parsed rules for the group. Then reduce(concat, ...)
+    ### concatenates the lists into a single list of rules.
     return reduce(concat, [expand_rule(parse_rule(rule)) for rule in
                            ### This inner comprehension gives us a list of
                            ### tuples (group, source, rule) where group is the
@@ -144,16 +93,150 @@ def rules(group):
                            ### rulespec).
                            [(group, source, rule)
                             for source, rule
-                            in POLICY.items('GLOBAL') + POLICY.items(group)]])
+                            in policy.items('GLOBAL') + policy.items(group)]])
 
 
-def parse(config):
+def parse_rule(rule):
     """
-    Parse the configuration file and return a list of rules (as dicts) defined
-    by the configuration file.
+    Given a RULE specifier of the form (TARGET, SOURCES, SPEC), return a
+    dictionary representing that rule, with SPEC expanded according to the
+    rules detailed in parse_spec().
     """
-    global POLICY
-    if POLICY is None:
-        POLICY = config
+    target, sources, spec = rule
+    protocol, spec = parse_spec(spec)
+    return expand_vars(rule_dict(sources, target, protocol, spec))
 
-    return reduce(concat, [rules(group) for group in groups()])
+
+def parse_spec(spec):
+    """
+    Given an un-expanded rule SPEC, return a tuple expanded from that
+    specifier.
+
+    SPEC is of the form PROTOCOL:SPEC, where PROTOCOL is 'tcp', 'udp', or
+    'icmp' and SPEC can be one of:
+
+    * A '*' indicating all ports (tcp/udp) or types (icmp).
+    * A range specifying the beginning and end of a range of ports (tcp/udp)
+      or types(icmp).
+    * A comma-separated list of ports (tcp/udp) or types (icmp).
+    * A single port (tcp/udp) or type (icmp).
+    * A variable containing one of the above.
+
+    The expanded tuple is of the form (PROTOCOL, SPEC) where PROTOCOL is the
+    same as above, SPEC is either an integer specifying a port (tcp/udp) or
+    type (icmp), a tuple containing integers specifying the start and end
+    points of a range of ports (tcp/udp) or types (icmp), or a list of
+    integers specifying ports (tcp/udp) or types (icmp).
+    """
+    ### Check if the whole spec is a variable.
+    spec = lookup(spec)
+
+    ### Extract the protocol
+    protocol, spec = spec.split(PROTO_SEPARATOR, 1)
+
+    ### Call lookup again to see if the spec uses a variable after the
+    ### protocol tag.
+    spec = lookup(spec)
+
+    if spec == '*':
+        ### User wants to open all ports/types.
+        return (protocol, protocol_glob(protocol))
+    elif RANGE_SEPARATOR in spec:
+        ### User wants to open a range of ports/types. Use lookup in case they
+        ### used a variable for the endpoints.
+        return (protocol, tuple([int(lookup(item)) for item
+                              ### Limit the split to 1 because a range can
+                              ### only have 2 endpoints.
+                              in spec.split(RANGE_SEPARATOR, 1)]))
+    elif LIST_SEPARATOR in spec:
+        ### User wants to open a list of ports/types. Use lookup in case one
+        ### of the items of the list is a variable.
+        return (protocol, [int(lookup(item)) for item
+                        in spec.split(LIST_SEPARATOR)])
+    ### User wants to open a single port/type. Look it up in case it is a
+    ### variable.
+    return (protocol, int(lookup(spec)))
+
+
+def lookup(variable):
+    """
+    Given a VARIABLE name from the policy, return the value of that
+    variable. Given any other value, return it unchanged.
+    """
+    if not is_variable(variable):
+        return variable
+    ### Strip the '@' for lookup.
+    return POLICY_VARS[variable[1:].lower()]
+
+
+def is_variable(string):
+    """
+    Return True if STRING starts with '@'.
+    """
+    return string.startswith('@')
+
+
+def protocol_glob(protocol):
+    """
+    Return the appropriate wildcard for the PROTOCOL. For tcp/udp, this
+    is (1, 65535), for icmp, this is -1.
+    """
+    return {'tcp': (1, 65535), 'udp': (1, 65535), 'icmp': -1}[protocol]
+
+
+def rule_dict(sources, target, protocol, spec):
+    """
+    Return a dictionary representing a rule.
+
+    * SOURCES is the list of sources for this rule. These can be security
+      group names or CIDR addresses.
+    * TARGET is the name of the security group this rule should be applied to.
+    * PROTOCOL is 'tcp', 'icmp', or 'udp'
+    * SPEC is the list of ports (tcp/udp) or types (icmp) this rule
+      allows.
+    """
+    return {'sources': sources,
+            'target': target,
+            'protocol': protocol,
+            'ports_or_types': spec}
+
+
+def expand_vars(rule):
+    """
+    Given a RULE (as a dict) return that rule with all variables expanded.
+    """
+    return rule_dict([lookup(source) for source in [rule['sources']]],
+                     rule['target'],
+                     rule['protocol'],
+                     rule['ports_or_types'])
+
+
+def expand_rule(rule):
+    """
+    Given a RULE (as a dict), return a list of rules that RULE expands to.
+    """
+    return reduce(concat, [expand_spec(expanded)
+                           for expanded in expand_sources(rule)])
+
+
+def expand_sources(rule):
+    """
+    Given a RULE (as a dict) return a list of rules, one for each source.
+    """
+    return [rule_dict(source,
+                      rule['target'],
+                      rule['protocol'],
+                      rule['ports_or_types']) for source in rule['sources']]
+
+
+def expand_spec(rule):
+    """
+    Given a RULE (as a dict) that specifies a list of ports/types, return a
+    list of rules, one for each port/type.
+    """
+    if type(rule['ports_or_types']) in [int, tuple]:
+        return [rule]
+    return [rule_dict(rule['sources'],
+                      rule['target'],
+                      rule['protocol'],
+                      port) for port in rule['ports_or_types']]
