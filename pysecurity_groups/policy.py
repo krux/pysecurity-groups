@@ -22,7 +22,8 @@ def canonicalize_group(group):
     """
     ### The GLOBAL group is a special case because it isn't actually a group,
     ### it defines the rules applied to all groups.
-    if group == 'GLOBAL': return group
+    if group == 'GLOBAL':
+        return group
     return group.lower().strip()
 
 
@@ -32,7 +33,8 @@ def groups():
     in canonical form.
     """
     for group in imap(canonicalize_group,
-                      filter(lambda g: g != 'GLOBAL', POLICY.sections())):
+                      [section for section in POLICY.sections()
+                       if section != 'GLOBAL']):
         yield group
 
 
@@ -87,6 +89,9 @@ def parse_spec(spec):
 
 
 def rule_dict(source, target, proto, name, spec):
+    """
+    Return a dictionary representing a rule.
+    """
     return {'source': source,
             'target': target,
             'protocol': proto,
@@ -143,6 +148,10 @@ def rules(group):
 
 
 def parse(config):
+    """
+    Parse the configuration file and return a list of rules (as dicts) defined
+    by the configuration file.
+    """
     global POLICY
     if POLICY is None:
         POLICY = config
