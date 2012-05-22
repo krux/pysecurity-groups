@@ -1,4 +1,4 @@
 pysecurity_groups
 =================
 
-Tool for managing/synchronizing AWS security groups.
+Tool for managing AWS security groups in bulk.

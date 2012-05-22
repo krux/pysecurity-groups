@@ -4,4 +4,4 @@
 ### Author: Paul Lathrop <paul@krux.com>
 ###
 
-"""Library for keeping EC2 security groups synchronized."""
+"""Library for working with EC2 security groups in bulk."""
