@@ -3,12 +3,22 @@
 # Comma-separated list of EC2 regions to manage security groups in.
 regions = us-east-1, us-west-2
 
+[VARIABLES]
+home-ip = 192.168.10.10
+office-ips = 10.10.0.1, 10.0.0.2
+emr-sgs = hadoop-cluster, hadoop-cluster-dn, hadoop-cluster-jt, hadoop-cluster-nn
+DNS = udp:53
+PING = icmp:0
+SSH_PORT = 22
+
 # The GLOBAL rules apply to every security group.
 [GLOBAL]
 # Allow ALL TCP ports on ALL hosts from example-a
 example-a: tcp:*
-# Allow ICMP PING on ALL hosts from example-b
-example-b: icmp:0
+# Allow ICMP PING on ALL hosts from office-ips
+@office-ips: @PING
+# Allow SSH from home
+@home-ip: tcp:@SSH_PORT
 
 [example-a]
 # Allow TCP port 3307 from example-b
@@ -17,7 +27,9 @@ example-b: tcp:3307
 10.0.0.1: icmp:*
 
 [example-b]
-# Allow TCP ports 10000 through 20000 from other hosts in example-b
-example-b: tcp:10000-20000
+# Allow TCP ports 10000 through 20000 from emr-sgs
+@emr-sgs: tcp:10000-20000
 # Allow TCP ports 22,80,443 from the 192.168.2.0/24 subnet
 192.168.2.0/24: tcp:22,80,443
+# Allow DNS from @home-ip
+@home-ip: @DNS
