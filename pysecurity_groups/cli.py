@@ -7,13 +7,10 @@
 """Command line interface for pysecurity-groups."""
 
 import ConfigParser
-import json
 from pprint import pprint
 import sys
 
 from argparse import ArgumentParser
-import boto
-from boto.ec2 import EC2Connection
 
 import pysecurity_groups.policy as policy
 
