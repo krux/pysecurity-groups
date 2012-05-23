@@ -121,8 +121,11 @@ def policy_report(config, args):
             'TARGET': {'key': 'target'},
             'PROTOCOL': {'key': 'protocol'},
             'PORT/TYPE': {'key': 'ports_or_types'}}
-    policy_rules = policy.parse(config)
-    hmap = util.header_widths(hmap, policy_rules)
+    rules = policy.parse(config)
+    hmap = util.header_widths(hmap, rules)
+    print util.format_headers(headers, hmap)
+    for rule in rules:
+        print util.format_rule(rule, headers, hmap)
     print util.format_headers(headers, hmap)
     for rule in policy_rules:
         print util.format_rule(rule, headers, hmap)
