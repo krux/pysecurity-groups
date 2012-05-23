@@ -80,15 +80,15 @@ def get_parser():
 
     ### 'policy' subcommand
     policy_parser = subparsers.add_parser('policy', help="""Generate a report
-                                          your desired configuration as parsed
-                                          by this command.""")
+                                          detailing your desired configuration
+                                          as parsed by this command.""")
     policy_parser.set_defaults(dispatch_fn=policy_report)
 
     ### 'report' subcommand
     report_parser = subparsers.add_parser('report', help="""Generate a report
                                           showing the differences between
                                           your desired configuration and your
-                                          current security groups.""")
+                                          current security groups/rules.""")
     report_parser.set_defaults(dispatch_fn=report)
 
     ### 'sync' subcommand
