@@ -8,6 +8,8 @@
 
 from operator import concat
 
+from pysecurity_groups.util import expand_sources, rule_dict
+
 
 POLICY_VARS = None
 PROTO_SEPARATOR = ':'
@@ -203,39 +205,12 @@ def protocol_glob(protocol):
     return {'tcp': (1, 65535), 'udp': (1, 65535), 'icmp': -1}[protocol]
 
 
-def rule_dict(sources, target, protocol, spec):
-    """
-    Return a dictionary representing a rule.
-
-    * SOURCES is the list of sources for this rule. These can be security
-      group names or CIDR addresses.
-    * TARGET is the name of the security group this rule should be applied to.
-    * PROTOCOL is 'tcp', 'icmp', or 'udp'
-    * SPEC is the list of ports (tcp/udp) or types (icmp) this rule
-      allows.
-    """
-    return {'sources': sources,
-            'target': target,
-            'protocol': protocol,
-            'ports_or_types': spec}
-
-
 def expand_rule(rule):
     """
     Given a RULE (as a dict), return a list of rules that RULE expands to.
     """
     return reduce(concat, [expand_spec(expanded)
                            for expanded in expand_sources(rule)])
-
-
-def expand_sources(rule):
-    """
-    Given a RULE (as a dict) return a list of rules, one for each source.
-    """
-    return [rule_dict(source,
-                      rule['target'],
-                      rule['protocol'],
-                      rule['ports_or_types']) for source in rule['sources']]
 
 
 def expand_spec(rule):
