@@ -109,17 +109,8 @@ def report(config, args):
     Output a report detailing the differences between the configured policy
     and the live rules as reported by the AWS API.
     """
-    ### Get the regions. After that, we're done with the config section;
-    ### remove it so we don't have to special-case it in the policy parsing
-    ### code.
     policy_regions = config.get('CONFIG', 'regions').split(',')
-    config.remove_section('CONFIG')
-
-    ### Get the groups/rules defined by the policy.
     policy_groups = policy.groups(config)
-    policy_rules = policy.parse(config)
-    from pprint import pprint
-    pprint(policy_rules)
 
 
 def sync(config, args):

@@ -21,6 +21,10 @@ def parse(config):
 
     Parsed rules are represented by dicts.
     """
+    ### The parsing code doesn't use the CONFIG section; remove it so we don't
+    ### have to special-case it.
+    config.remove_section('CONFIG')
+
     ### Set up the variable mapping
     if config.has_section('VARIABLES'):
         global POLICY_VARS
