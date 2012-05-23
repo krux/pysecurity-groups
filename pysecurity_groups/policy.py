@@ -106,8 +106,9 @@ def parse_rule(rule):
     rules detailed in parse_spec().
     """
     target, sources, spec = rule
+    sources = parse_sources(sources)
     protocol, spec = parse_spec(spec)
-    return expand_vars(rule_dict(sources, target, protocol, spec))
+    return rule_dict(sources, target, protocol, spec)
 
 
 def parse_spec(spec):
@@ -161,6 +162,18 @@ def parse_spec(spec):
     return (protocol, int(lookup(spec)))
 
 
+def parse_sources(sources):
+    if LIST_SEPARATOR in sources:
+        sources = [lookup(source) for source in sources.split(LIST_SEPARATOR)]
+    else:
+        sources = lookup(sources)
+    if type(sources) is not list:
+        ### Pack single sources in a list so I don't have to special-case the
+        ### expansion code.
+        sources = [sources]
+    return sources
+
+
 def lookup(variable):
     """
     Given a VARIABLE name from the policy, return the value of that
@@ -175,11 +188,11 @@ def lookup(variable):
         raise KeyError('No such variable %s defined in policy!' % variable)
 
 
-def is_variable(string):
+def is_variable(thing):
     """
-    Return True if STRING starts with '@'.
+    Return True if THING is a string that starts with '@'.
     """
-    return string.startswith('@')
+    return hasattr(thing, 'startswith') and thing.startswith('@')
 
 
 def protocol_glob(protocol):
@@ -205,16 +218,6 @@ def rule_dict(sources, target, protocol, spec):
             'target': target,
             'protocol': protocol,
             'ports_or_types': spec}
-
-
-def expand_vars(rule):
-    """
-    Given a RULE (as a dict) return that rule with all variables expanded.
-    """
-    return rule_dict([lookup(source) for source in [rule['sources']]],
-                     rule['target'],
-                     rule['protocol'],
-                     rule['ports_or_types'])
 
 
 def expand_rule(rule):
