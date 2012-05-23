@@ -7,6 +7,7 @@
 """Command line interface for pysecurity-groups."""
 
 import ConfigParser
+import errno
 import sys
 
 from argparse import ArgumentParser
@@ -27,7 +28,20 @@ def main():
     args = get_parser().parse_args()
     config = get_config(args)
 
-    args.dispatch_fn(config, args)
+    ### The reporting functions use print statements. If you pipe the output
+    ### of this script to, for example, less, and quit before all the output
+    ### is consumed, the print statements will raise an IOError indicating a
+    ### broken pipe. We deal with that here.
+    try:
+        args.dispatch_fn(config, args)
+    except IOError, exc:
+        if exc.errno == errno.EPIPE:
+            sys.exit(0)
+        else:
+            raise exc
+    except KeyboardInterrupt:
+        print 'Interrupted'
+        sys.exit(255)
 
 
 def get_config(args):
