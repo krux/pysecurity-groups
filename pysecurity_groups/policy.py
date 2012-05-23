@@ -57,7 +57,7 @@ def groups(policy):
     """
     for group in [canonicalize_group(group) for group
                   in [section for section in policy.sections()
-                      if section != 'GLOBAL']]:
+                      if section not in ['GLOBAL', 'VARIABLES']]]:
         yield group
 
 
