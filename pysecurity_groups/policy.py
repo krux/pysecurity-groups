@@ -17,7 +17,7 @@ LIST_SEPARATOR = ','
 
 def parse(config):
     """
-    Parse the CONFIG and return a list the rules it defines.
+    Parse the CONFIG and return a list of the rules it defines.
 
     Parsed rules are represented by dicts.
     """
