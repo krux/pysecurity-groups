@@ -12,6 +12,7 @@ import sys
 from argparse import ArgumentParser
 
 import pysecurity_groups.policy as policy
+import pysecurity_groups.util as util
 
 
 if __name__ == '__main__':
@@ -81,14 +82,14 @@ def get_parser():
     policy_parser = subparsers.add_parser('policy', help="""Generate a report
                                           your desired configuration as parsed
                                           by this command.""")
-    policy_parser.set_defaults(dispatch_fn=policy_report) ### dispatch to policy()
+    policy_parser.set_defaults(dispatch_fn=policy_report)
 
     ### 'report' subcommand
     report_parser = subparsers.add_parser('report', help="""Generate a report
                                           showing the differences between
                                           your desired configuration and your
                                           current security groups.""")
-    report_parser.set_defaults(dispatch_fn=report) ### dispatch to report()
+    report_parser.set_defaults(dispatch_fn=report)
 
     ### 'sync' subcommand
     sync_parser = subparsers.add_parser('sync', help="""Synchronize security
@@ -96,7 +97,7 @@ def get_parser():
                                         Adds new groups/rules and REMOVES
                                         groups/rules not defined in the
                                         configuration file.""")
-    sync_parser.set_defaults(dispatch_fn=sync) ### dispatch to sync()
+    sync_parser.set_defaults(dispatch_fn=sync)
 
     ### 'update' subcommand
     update_parser = subparsers.add_parser('update', help="""Update security
@@ -105,7 +106,7 @@ def get_parser():
                                           but does NOT remove groups/rules that
                                           are not defined in the configuration
                                           file.""")
-    update_parser.set_defaults(dispatch_fn=update) ### dispatch to update()
+    update_parser.set_defaults(dispatch_fn=update)
 
     return parser
 
@@ -114,9 +115,17 @@ def policy_report(config, args):
     """
     Output a report detailing the policy parsed from the configuration file.
     """
+    ### Mapping from column headers to rule key for that column.
+    headers = ['SOURCE', 'TARGET', 'PROTOCOL', 'PORT/TYPE']
+    hmap = {'SOURCE': {'key': 'sources'},
+            'TARGET': {'key': 'target'},
+            'PROTOCOL': {'key': 'protocol'},
+            'PORT/TYPE': {'key': 'ports_or_types'}}
     policy_rules = policy.parse(config)
-    from pprint import pprint
-    pprint(policy_rules)
+    hmap = util.header_widths(hmap, policy_rules)
+    print util.format_headers(headers, hmap)
+    for rule in policy_rules:
+        print util.format_rule(rule, headers, hmap)
 
 
 def report(config, args):
