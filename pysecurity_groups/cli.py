@@ -100,11 +100,11 @@ def get_parser():
     policy_parser.set_defaults(dispatch_fn=policy_report)
 
     ### 'live-rules' subcommand
-    policy_parser = subparsers.add_parser('live-rules', help="""Generate a report
-                                          detailing your current security
-                                          groups/rules as reported by the
-                                          AWS API.""")
-    policy_parser.set_defaults(dispatch_fn=live_rules)
+    live_parser = subparsers.add_parser('live-rules', help="""Generate a
+                                        report detailing your current security
+                                        groups/rules as reported by the AWS
+                                        API.""")
+    live_parser.set_defaults(dispatch_fn=live_rules)
 
     ### 'report' subcommand
     report_parser = subparsers.add_parser('report', help="""Generate a report
