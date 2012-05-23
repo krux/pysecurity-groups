@@ -77,6 +77,12 @@ def get_parser():
     subparsers = parser.add_subparsers(title='Sub-Commands',
                                        description='Valid sub-commands:')
 
+    ### 'policy' subcommand
+    policy_parser = subparsers.add_parser('policy', help="""Generate a report
+                                          your desired configuration as parsed
+                                          by this command.""")
+    policy_parser.set_defaults(dispatch_fn=policy_report) ### dispatch to policy()
+
     ### 'report' subcommand
     report_parser = subparsers.add_parser('report', help="""Generate a report
                                           showing the differences between
@@ -102,6 +108,15 @@ def get_parser():
     update_parser.set_defaults(dispatch_fn=update) ### dispatch to update()
 
     return parser
+
+
+def policy_report(config, args):
+    """
+    Output a report detailing the policy parsed from the configuration file.
+    """
+    policy_rules = policy.parse(config)
+    from pprint import pprint
+    pprint(policy_rules)
 
 
 def report(config, args):
