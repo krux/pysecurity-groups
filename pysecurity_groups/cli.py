@@ -13,6 +13,7 @@ from argparse import ArgumentParser
 
 import pysecurity_groups.policy as policy
 import pysecurity_groups.util as util
+import pysecurity_groups.aws as aws
 
 
 if __name__ == '__main__':
@@ -84,6 +85,13 @@ def get_parser():
                                           as parsed by this command.""")
     policy_parser.set_defaults(dispatch_fn=policy_report)
 
+    ### 'current' subcommand
+    policy_parser = subparsers.add_parser('current', help="""Generate a report
+                                          detailing your current security
+                                          groups/rules as reported by the
+                                          AWS API.""")
+    policy_parser.set_defaults(dispatch_fn=current)
+
     ### 'report' subcommand
     report_parser = subparsers.add_parser('report', help="""Generate a report
                                           showing the differences between
@@ -126,8 +134,22 @@ def policy_report(config, args):
     print util.format_headers(headers, hmap)
     for rule in rules:
         print util.format_rule(rule, headers, hmap)
+
+
+def current(config, args):
+    """
+    Output a report detailing the policy defined in AWS.
+    """
+    headers = ['REGION', 'SOURCE', 'TARGET', 'PROTOCOL', 'PORT/TYPE']
+    hmap = {'REGION': {'key': 'region'},
+            'SOURCE': {'key': 'sources'},
+            'TARGET': {'key': 'target'},
+            'PROTOCOL': {'key': 'protocol'},
+            'PORT/TYPE': {'key': 'ports_or_types'}}
+    rules = aws.policy(config)
+    hmap = util.header_widths(hmap, rules)
     print util.format_headers(headers, hmap)
-    for rule in policy_rules:
+    for rule in rules:
         print util.format_rule(rule, headers, hmap)
 
 
