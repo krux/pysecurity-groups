@@ -23,16 +23,33 @@ def main():
     Entry point for the pysecurity_groups CLI.
     """
     args = get_parser().parse_args()
-    config = get_config(args.config)
+    config = get_config(args)
+
     args.dispatch_fn(config, args)
 
 
-def get_config(config_file):
+def get_config(args):
     """
     Parse the configuration file and return a ConfigParser object.
     """
     config = ConfigParser.SafeConfigParser()
-    config.read(config_file)
+    config.read(args.config)
+    ### Get the regions. Prefer regions specified on the command line, then
+    ### regions specified in the config file. If neither is provided, use a
+    ### sensible default.
+    if args.region is None:
+        ### No regions were specified on the command line, so try loading them
+        ### from the config file.
+        try:
+            config.get('CONFIG', 'regions')
+        except (ConfigParser.NoOptionError, ConfigParser.NoSectionError):
+            ### No regions on the command line, and none in the config file,
+            ### so set a sane default.
+            if not config.has_section('CONFIG'):
+                config.add_section('CONFIG')
+            config.set('CONFIG', 'regions', 'us-east-1')
+    else:
+        config.set('CONFIG', 'regions', ','.join(args.region))
     return config
 
 
@@ -95,22 +112,14 @@ def report(config, args):
     ### Get the regions. After that, we're done with the config section;
     ### remove it so we don't have to special-case it in the policy parsing
     ### code.
-    if args.region is None:
-        ### No regions were specified on the command line, so try loading them
-        ### from the config file.
-        try:
-            policy_regions = config.get('CONFIG', 'regions').split(',')
-        except ConfigParser.NoOptionError:
-            ### No regions on the command line, and none in the config file,
-            ### so use a sane default.
-            policy_regions = ['us-east-1']
-    else:
-        policy_regions = args.region
+    policy_regions = config.get('CONFIG', 'regions').split(',')
     config.remove_section('CONFIG')
 
     ### Get the groups/rules defined by the policy.
     policy_groups = policy.groups(config)
     policy_rules = policy.parse(config)
+    from pprint import pprint
+    pprint(policy_rules)
 
 
 def sync(config, args):
