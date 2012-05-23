@@ -79,9 +79,9 @@ def canonicalize_group(group):
 
 def rules(group, policy):
     """
-    Given a GROUP, parse the rules for that group from the policy and return
-    them (as a list of dicts). Rules which specify lists of sources or ports
-    are expanded into multiple rules. Variables used by the rules are
+    Given a GROUP and a POLICY, parse the rules for that GROUP from the POLICY
+    and return them (as a list of dicts). Rules which specify lists of sources
+    or ports are expanded into multiple rules. Variables used by the rules are
     expanded.
     """
     ### This outer comprehension gives us a list of lists of dicts
