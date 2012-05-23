@@ -55,10 +55,9 @@ def groups(policy):
     Return an iterator over the groups defined by the policy. Group names are
     returned in canonical form as detailed in canonicalize_group().
     """
-    for group in [canonicalize_group(group) for group
-                  in [section for section in policy.sections()
-                      if section not in ['GLOBAL', 'VARIABLES']]]:
-        yield group
+    return [canonicalize_group(group) for group
+            in [section for section in policy.sections()
+                if section not in ['GLOBAL', 'VARIABLES']]]
 
 
 def canonicalize_group(group):
