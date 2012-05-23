@@ -85,12 +85,12 @@ def get_parser():
                                           as parsed by this command.""")
     policy_parser.set_defaults(dispatch_fn=policy_report)
 
-    ### 'current' subcommand
-    policy_parser = subparsers.add_parser('current', help="""Generate a report
+    ### 'live-rules' subcommand
+    policy_parser = subparsers.add_parser('live-rules', help="""Generate a report
                                           detailing your current security
                                           groups/rules as reported by the
                                           AWS API.""")
-    policy_parser.set_defaults(dispatch_fn=current)
+    policy_parser.set_defaults(dispatch_fn=live_rules)
 
     ### 'report' subcommand
     report_parser = subparsers.add_parser('report', help="""Generate a report
@@ -136,7 +136,7 @@ def policy_report(config, args):
         print util.format_rule(rule, headers, hmap)
 
 
-def current(config, args):
+def live_rules(config, args):
     """
     Output a report detailing the policy defined in AWS.
     """
