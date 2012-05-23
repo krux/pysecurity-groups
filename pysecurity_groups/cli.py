@@ -7,6 +7,7 @@
 """Command line interface for pysecurity-groups."""
 
 import ConfigParser
+from itertools import izip, repeat
 from pprint import pprint
 import sys
 
@@ -15,19 +16,26 @@ from argparse import ArgumentParser
 import pysecurity_groups.policy as policy
 
 
-def report(config, args):
-    ### pprint(list(izip(policy_regions, repeat(policy_groups))))
-    config.remove_section('CONFIG')
-    rules = policy.parse(config)
-    pprint([rule for rule in rules])
+if __name__ == '__main__':
+    sys.exit(main())
 
 
-def sync(config, args):
-    pass
+def main():
+    """
+    Entry point for the pysecurity_groups CLI.
+    """
+    args = get_parser().parse_args()
+    config = get_config(args.config)
+    args.dispatch_fn(config, args)
 
 
-def update(config, args):
-    pass
+def get_config(config_file):
+    """
+    Parse the configuration file and return a ConfigParser object.
+    """
+    config = ConfigParser.SafeConfigParser()
+    config.read(config_file)
+    return config
 
 
 def get_parser():
@@ -46,8 +54,7 @@ def get_parser():
     parser.add_argument('-r', '--region', help="""Region to manage security
                                                   groups in. Can be specified
                                                   multiple times. Default:
-                                                  us-east-1""",
-                        default=['us-east-1'], action='append')
+                                                  us-east-1""", action='append')
 
     ##########################################
     ### Sub-command parsers and arguments. ###
@@ -82,24 +89,38 @@ def get_parser():
     return parser
 
 
-def get_config(config_file):
+def report(config, args):
     """
-    Parse the configuration file and return a ConfigParser object.
+    Output a report detailing the differences between the configured policy
+    and the live rules as reported by the AWS API.
     """
-    config = ConfigParser.SafeConfigParser()
-    config.read(config_file)
-    return config
+    ### Get the regions. After that, we're done with the config section;
+    ### remove it so we don't have to special-case it in the policy parsing
+    ### code.
+    if args.region is None:
+        ### No regions were specified on the command line, so try loading them
+        ### from the config file.
+        try:
+            policy_regions = config.get('CONFIG', 'regions').split(',')
+        except ConfigParser.NoOptionError:
+            ### No regions on the command line, and none in the config file,
+            ### so use a sane default.
+            policy_regions = ['us-east-1']
+    else:
+        policy_regions = args.region
+    config.remove_section('CONFIG')
+
+    ### Get the groups/rules defined by the policy.
+    policy_groups = policy.groups(config)
+    policy_rules = policy.parse(config)
+
+    ### pprint(list(izip(policy_regions, repeat(policy_groups))))
+    ### live_rules = aws.
 
 
-def main():
-    """
-    Entry point for the pysecurity_groups CLI.
-    """
-    args = get_parser().parse_args()
-    config = get_config(args.config)
-
-    args.dispatch_fn(config, args)
+def sync(config, args):
+    pass
 
 
-if __name__ == '__main__':
-    sys.exit(main())
+def update(config, args):
+    pass
