@@ -7,8 +7,6 @@
 """Command line interface for pysecurity-groups."""
 
 import ConfigParser
-from itertools import izip, repeat
-from pprint import pprint
 import sys
 
 from argparse import ArgumentParser
@@ -113,9 +111,6 @@ def report(config, args):
     ### Get the groups/rules defined by the policy.
     policy_groups = policy.groups(config)
     policy_rules = policy.parse(config)
-
-    ### pprint(list(izip(policy_regions, repeat(policy_groups))))
-    ### live_rules = aws.
 
 
 def sync(config, args):
