@@ -136,12 +136,16 @@ def policy_report(config, args):
     Output a report detailing the policy parsed from the configuration file.
     """
     ### Mapping from column headers to rule key for that column.
-    headers = ['SOURCE', 'TARGET', 'PROTOCOL', 'PORT/TYPE']
-    hmap = {'SOURCE': {'key': 'sources'},
+    headers = ['REGION', 'SOURCE', 'TARGET', 'PROTOCOL', 'PORT/TYPE']
+    hmap = {'REGION': {'key': 'region'},
+            'SOURCE': {'key': 'sources'},
             'TARGET': {'key': 'target'},
             'PROTOCOL': {'key': 'protocol'},
             'PORT/TYPE': {'key': 'ports_or_types'}}
-    rules = policy.parse(config)
+    regions = util.regions(config)
+    rules = sorted([dict([('region', region)] + rule.items())
+                    for rule in policy.parse(config)
+                    for region in regions], key=itemgetter('region'))
     hmap = util.header_widths(hmap, rules)
     print util.format_headers(headers, hmap)
     for rule in rules:
