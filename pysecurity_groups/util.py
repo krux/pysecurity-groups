@@ -27,7 +27,7 @@ def format_rule(rule, headers, hmap):
                         for header in headers]])
 
 
-def format_group_actions(groups, hmap, action='+'):
+def format_group_actions(groups, hmap, action):
     """
     Given a list of group, region tuples: GROUPS, and HMAP mapping headers to
     their attributes, return a formatted list of action strings.
