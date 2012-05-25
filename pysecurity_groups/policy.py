@@ -15,6 +15,7 @@ POLICY_VARS = None
 PROTO_SEPARATOR = ':'
 RANGE_SEPARATOR = '-'
 LIST_SEPARATOR = ','
+SPECIAL_CONFIG_SECTIONS = ['CONFIG', 'GLOBAL', 'VARIABLES']
 
 
 def parse(config):
@@ -24,7 +25,7 @@ def parse(config):
     Parsed rules are represented by dicts.
     """
     ### The parsing code doesn't use the CONFIG section; remove it so we don't
-    ### have to special-case it.
+    ### have to special-case the section later.
     config.remove_section('CONFIG')
 
     ### Set up the variable mapping
@@ -61,9 +62,9 @@ def groups(policy):
     Return the set of groups defined by the POLICY. Group names are returned
     in canonical form as detailed in canonicalize_group().
     """
-    return [canonicalize_group(group) for group
-            in [section for section in policy.sections()
-                if section not in ['GLOBAL', 'VARIABLES']]]
+    return set([canonicalize_group(group) for group
+                in [section for section in policy.sections()
+                    if section not in SPECIAL_CONFIG_SECTIONS]])
 
 
 def canonicalize_group(group):
