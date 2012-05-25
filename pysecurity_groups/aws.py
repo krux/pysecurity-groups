@@ -68,3 +68,11 @@ def parse_grants(grants):
                    if grant.cidr_ip is not None],
                   [grant.name for grant in grants
                    if grant.name is not None])
+
+
+def groups(region):
+    """
+    Given a REGION, return the set of all security groups defined in that REGION.
+    """
+    return set([group.name for group in
+                connect_to_region(region).get_all_security_groups()])

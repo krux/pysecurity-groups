@@ -27,6 +27,17 @@ def format_rule(rule, headers, hmap):
                         for header in headers]])
 
 
+def format_group_actions(groups, hmap, action='+'):
+    """
+    Given a list of group, region tuples: GROUPS, and HMAP mapping headers to
+    their attributes, return a formatted list of action strings.
+    """
+    return [(action.ljust(hmap['ACTION']['width']),
+             group.ljust(hmap['GROUP']['width']),
+             region.ljust(hmap['REGION']['width']))
+            for group, region in groups]
+
+
 def header_widths(hmap, rules):
     """
     Given an HMAP mapping headers to their attributes, and a set of rules,
@@ -86,3 +97,11 @@ def expand_sources(rule):
                       rule['target'],
                       rule['protocol'],
                       rule['ports_or_types']) for source in rule['sources']]
+
+
+def regions(config):
+    """
+    Given CONFIG, return a list of regions specified in the CONFIG.
+    """
+    return [region.strip() for region in
+            config.get('CONFIG', 'regions').split(',')]
