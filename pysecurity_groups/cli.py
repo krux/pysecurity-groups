@@ -79,13 +79,11 @@ def get_parser():
     parser = ArgumentParser(description="""Command-line utility for working
                             with EC2 security groups in bulk.""")
     parser.add_argument('-c', '--config', help="""Path to the security-groups
-                                                  configuration file.
-                                                  Default: %(default)s.""",
+                        configuration file.  Default: %(default)s.""",
                         default='/etc/security-groups/security-groups.conf')
     parser.add_argument('-r', '--region', help="""Region to manage security
-                                                  groups in. Can be specified
-                                                  multiple times. Default:
-                                                  us-east-1""", action='append')
+                        groups in. Can be specified multiple times. Default:
+                        us-east-1""", action='append')
 
     ##########################################
     ### Sub-command parsers and arguments. ###
