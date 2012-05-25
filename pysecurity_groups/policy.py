@@ -58,8 +58,8 @@ def expand_value(varspec):
 
 def groups(policy):
     """
-    Return an iterator over the groups defined by the policy. Group names are
-    returned in canonical form as detailed in canonicalize_group().
+    Return the set of groups defined by the POLICY. Group names are returned
+    in canonical form as detailed in canonicalize_group().
     """
     return [canonicalize_group(group) for group
             in [section for section in policy.sections()
@@ -165,6 +165,10 @@ def parse_spec(spec):
 
 
 def parse_sources(sources):
+    """
+    Given a SOURCES string, expand all variables and split it into a list if
+    it is in list form.
+    """
     if LIST_SEPARATOR in sources:
         sources = [lookup(source) for source in sources.split(LIST_SEPARATOR)]
     else:

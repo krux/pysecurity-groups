@@ -9,8 +9,8 @@
 
 def format_headers(headers, hmap):
     """
-    Given a list of HEADERS and an HMAP mapping the headers to their
-    attributes, return a formatted header string.
+    Given a list of HEADERS and HMAP mapping the headers to their attributes,
+    return a formatted header string.
     """
     return ''.join([header.ljust(hmap[header]['width'])
                     for header in headers])
@@ -18,7 +18,7 @@ def format_headers(headers, hmap):
 
 def format_rule(rule, headers, hmap):
     """
-    Given a RULE, a list of HEADERS, and an HMAP mapping the headers to their
+    Given a RULE, a list of HEADERS, and HMAP mapping the headers to their
     attributes, return a formatted rule string.
     """
     return ''.join([format_for_report(rule[key]).ljust(width)
