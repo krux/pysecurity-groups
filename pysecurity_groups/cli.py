@@ -104,11 +104,6 @@ def get_parser():
                                           showing the differences between
                                           your desired configuration and your
                                           current security groups/rules.""")
-    report_parser.add_argument('--no-groups', help="""Don't explicitly show
-                               the groups that will be added/removed in
-                               addition to listing the rules. By default group
-                               actions are explicit.""", action='store_true',
-                               default=False)
     report_parser.set_defaults(dispatch_fn=report)
 
     ### 'live-rules' subcommand
@@ -181,43 +176,39 @@ def report(config, args):
     Output a report detailing the differences between the configured policy
     and the live rules as reported by the AWS API.
     """
-    if not args.no_groups:
-        #####################
-        ### Groups report ###
-        #####################
-        headers = ['ACTION', 'GROUP', 'REGION']
-        hmap = defaultdict(dict)
-        ### The width of the ACTION column is just the padded width of
-        ### 'ACTION', because the action is just one of '+' or '-'
-        hmap['ACTION']['width'] = len('ACTION') + 2
-        regions = util.regions(config)
-        ### The width of the REGION column is the greater of the padded width
-        ### of the widest region name and the padded width of 'REGION'
-        hmap['REGION']['width'] = max(len('REGION') + 2,
-                                      max([len(region) + 2
-                                           for region in regions]))
-        policy_groups = policy.groups(config)
-        policy_groups = dict([(region, policy_groups) for region in regions])
-        live_groups = dict([(region, aws.groups(region)) for region in regions])
-        ### The width of the GROUP column is the greater of the padded width
-        ### of the widest group name and the padded width of 'GROUP'.
-        all_groups = reduce(lambda a, b: a.union(b),
-                            [policy_groups[region].union(live_groups[region])
-                             for region in regions])
-        hmap['GROUP']['width'] = max(len('GROUP') + 2,
-                                     max([len(group) + 2
-                                          for group in all_groups]))
-        ### Now we actually start outputting the report, yay!
-        print util.format_headers(headers, hmap)
-        add_groups = [(group, reg) for reg in regions for group in
-                      policy_groups[reg].difference(live_groups[reg])]
-        del_groups = [(group, reg) for reg in regions for group in
-                      live_groups[reg].difference(policy_groups[reg])]
-        actions = util.format_group_actions(add_groups, hmap, '+')
-        actions += util.format_group_actions(del_groups, hmap, '-')
-        for action, group, region in actions:
-            print '%s%s%s' % (action, group, region)
-        print
+    headers = ['ACTION', 'GROUP', 'REGION']
+    hmap = defaultdict(dict)
+    ### The width of the ACTION column is just the padded width of
+    ### 'ACTION', because the action is one of: ['ADD', 'REMOVE',
+    ### 'CREATE', 'DELETE'] all of which fit.
+    hmap['ACTION']['width'] = len('ACTION') + 2
+    regions = util.regions(config)
+    ### The width of the REGION column is the greater of the padded width
+    ### of the widest region name and the padded width of 'REGION'
+    hmap['REGION']['width'] = max(len('REGION') + 2,
+                                  max([len(region) + 2
+                                       for region in regions]))
+    policy_groups = policy.groups(config)
+    policy_groups = dict([(region, policy_groups) for region in regions])
+    live_groups = dict([(region, aws.groups(region)) for region in regions])
+    ### The width of the GROUP column is the greater of the padded width
+    ### of the widest group name and the padded width of 'GROUP'.
+    all_groups = reduce(lambda a, b: a.union(b),
+                        [policy_groups[region].union(live_groups[region])
+                         for region in regions])
+    hmap['GROUP']['width'] = max(len('GROUP') + 2,
+                                 max([len(group) + 2
+                                      for group in all_groups]))
+    ### Now we actually start outputting the report, yay!
+    print util.format_headers(headers, hmap)
+    add_groups = [(group, reg) for reg in regions for group in
+                  policy_groups[reg].difference(live_groups[reg])]
+    del_groups = [(group, reg) for reg in regions for group in
+                  live_groups[reg].difference(policy_groups[reg])]
+    actions = util.format_group_actions(add_groups, hmap, 'CREATE')
+    actions += util.format_group_actions(del_groups, hmap, 'DELETE')
+    for action, group, region in actions:
+        print '%s%s%s' % (action, group, region)
 
 
 def sync(config, args):
