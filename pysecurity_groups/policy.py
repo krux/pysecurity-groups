@@ -8,7 +8,7 @@
 
 from operator import concat
 
-from pysecurity_groups.util import expand_sources, rule_dict
+from util import expand_sources, rule_dict
 
 
 POLICY_VARS = None

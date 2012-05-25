@@ -12,9 +12,9 @@ import sys
 
 from argparse import ArgumentParser
 
-import pysecurity_groups.policy as policy
-import pysecurity_groups.util as util
-import pysecurity_groups.aws as aws
+import policy as policy
+import util as util
+import aws as aws
 
 
 if __name__ == '__main__':

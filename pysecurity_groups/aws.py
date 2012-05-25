@@ -7,12 +7,14 @@
 """AWS functions for pysecurity-groups."""
 
 from operator import concat
-import string
 
+### The code which reads the boto configuration files only runs when you
+### import boto, so even though we aren't using the module, we need to import
+### it.
 import boto
 from boto.ec2 import connect_to_region
 
-from pysecurity_groups.util import expand_sources, rule_dict
+from util import expand_sources, rule_dict
 
 
 def policy(config):
