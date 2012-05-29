@@ -7,11 +7,13 @@
 """Policy functions for pysecurity-groups."""
 
 from operator import concat
+import re
 
 from util import expand_sources, rule_dict
 
 
-POLICY_VARS = None
+POLICY_VARS = {}
+VAR_REGEX = re.compile(r'@[\w-]*')
 PROTO_SEPARATOR = ':'
 RANGE_SEPARATOR = '-'
 LIST_SEPARATOR = ','
@@ -31,53 +33,21 @@ def parse(config):
     ### Set up the variable mapping
     if config.has_section('VARIABLES'):
         global POLICY_VARS
-        POLICY_VARS = parse_vars(config.items('VARIABLES'))
+        POLICY_VARS = dict([(name.translate(None, '\n'),
+                             value.translate(None, '\n'))
+                            for name, value in config.items('VARIABLES')])
         config.remove_section('VARIABLES')
 
     return reduce(concat, [rules(group, config) for group in groups(config)])
 
 
-def parse_vars(variables):
-    """
-    Given a list of un-expanded VARIABLES, return a dict mapping variable
-    names to the expanded value of the variable as detailed in expand_value().
-    """
-    return dict([expand_value(varspec) for varspec in variables])
-
-
-def expand_value(varspec):
-    """
-    Given VARSPEC, a tuple of the form (NAME, VALUE), return a tuple of the
-    form (NAME, EXPANDED), where EXPANDED is a (python) list if VALUE
-    specified a (text) list of values.
-    """
-    name, value = varspec
-    if LIST_SEPARATOR in value:
-        value = [val.strip() for val in value.split(LIST_SEPARATOR)]
-    return (name, value)
-
-
 def groups(policy):
     """
-    Return the set of groups defined by the POLICY. Group names are returned
-    in canonical form as detailed in canonicalize_group().
+    Return the set of groups defined by the POLICY.
     """
-    return set([canonicalize_group(group) for group
+    return set([group for group
                 in [section for section in policy.sections()
                     if section not in SPECIAL_CONFIG_SECTIONS]])
-
-
-def canonicalize_group(group):
-    """
-    Given a group name GROUP, return the group name in canonical form.
-
-    Canonical form is lowercase with white space trimmed from each end.
-    """
-    ### The GLOBAL group is a special case because it isn't actually a group,
-    ### it defines the rules applied to all groups.
-    if group == 'GLOBAL':
-        return group
-    return group.lower().strip()
 
 
 def rules(group, policy):
@@ -99,7 +69,34 @@ def rules(group, policy):
                            ### rulespec).
                            [(group, source, rule)
                             for source, rule
-                            in policy.items('GLOBAL') + policy.items(group)]])
+                            in expand_variables(policy.items('GLOBAL')) +
+                            expand_variables(policy.items(group))]])
+
+
+def expand_variables(items):
+    """
+    Given a list of ITEMS which are tuples of the form (SOURCE, TARGET),
+    expand all the variables in SOURCE and TARGET and return a list of tuples
+    with the variables expanded.
+    """
+    return [expand_vars(source, target) for source, target in items]
+
+
+def expand_vars(source, target):
+    """
+    Given a SOURCE and a TARGET, expand the variables in SOURCE and TARGET and
+    return a tuple of the expanded strings.
+    """
+    return (reduce(replace_var, VAR_REGEX.findall(source), source),
+            reduce(replace_var, VAR_REGEX.findall(target), target))
+
+
+def replace_var(varstring, variable):
+    """
+    Given a VARSTRING and a VARIABLE, return a string with all instances of
+    VARIABLE in VARSTRING replaced by their value.
+    """
+    return re.sub(re.compile(variable + r'\b([^-]|$)'), lookup(variable) + r'\1', varstring)
 
 
 def parse_rule(rule):
@@ -135,34 +132,23 @@ def parse_spec(spec):
     points of a range of ports (tcp/udp) or types (icmp), or a list of
     integers specifying ports (tcp/udp) or types (icmp).
     """
-    ### Check if the whole spec is a variable.
-    spec = lookup(spec)
-
     ### Extract the protocol
     protocol, spec = spec.split(PROTO_SEPARATOR, 1)
-
-    ### Call lookup again to see if the spec uses a variable after the
-    ### protocol tag.
-    spec = lookup(spec)
 
     if spec == '*':
         ### User wants to open all ports/types.
         return (protocol, protocol_glob(protocol))
     elif RANGE_SEPARATOR in spec:
-        ### User wants to open a range of ports/types. Use lookup in case they
-        ### used a variable for the endpoints.
-        return (protocol, tuple([int(lookup(item)) for item
+        ### User wants to open a range of ports/types.
+        return (protocol, tuple([int(item) for item
                               ### Limit the split to 1 because a range can
                               ### only have 2 endpoints.
                               in spec.split(RANGE_SEPARATOR, 1)]))
     elif LIST_SEPARATOR in spec:
-        ### User wants to open a list of ports/types. Use lookup in case one
-        ### of the items of the list is a variable.
-        return (protocol, [int(lookup(item)) for item
-                        in spec.split(LIST_SEPARATOR)])
-    ### User wants to open a single port/type. Look it up in case it is a
-    ### variable.
-    return (protocol, int(lookup(spec)))
+        ### User wants to open a list of ports/types.
+        return (protocol, [int(item) for item in spec.split(LIST_SEPARATOR)])
+    ### User wants to open a single port/type.
+    return (protocol, int(spec))
 
 
 def parse_sources(sources):
@@ -171,9 +157,7 @@ def parse_sources(sources):
     it is in list form.
     """
     if LIST_SEPARATOR in sources:
-        sources = [lookup(source) for source in sources.split(LIST_SEPARATOR)]
-    else:
-        sources = lookup(sources)
+        sources = [source.strip() for source in sources.split(LIST_SEPARATOR)]
     if type(sources) is not list:
         ### Pack single sources in a list so I don't have to special-case the
         ### expansion code.
@@ -186,11 +170,12 @@ def lookup(variable):
     Given a VARIABLE name from the policy, return the value of that
     variable. Given any other value, return it unchanged.
     """
+    variable = variable.lower()
     if not is_variable(variable):
         return variable
-    ### Strip the '@' for lookup.
     try:
-        return POLICY_VARS[variable[1:].lower()]
+        ### Strip the '@' for lookup.
+        return POLICY_VARS[variable[1:]]
     except KeyError:
         raise KeyError('No such variable %s defined in policy!' % variable)
 
