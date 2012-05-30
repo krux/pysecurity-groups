@@ -42,7 +42,8 @@ def expand_rules(group):
     Given a GROUP, return a list of rules for that group, with each rule fully
     expanded.
     """
-    return reduce(concat, [expand_rule(group, rule) for rule in group.rules])
+    return reduce(concat, [expand_rule(group, rule) for rule in group.rules],
+                  [])
 
 
 def expand_rule(group, rule):
