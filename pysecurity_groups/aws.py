@@ -52,9 +52,9 @@ def expand_rule(group, rule):
     each distinct source or port in a list of ports.
     """
     if rule.from_port == rule.to_port:
-        ports_or_types = rule.from_port
+        ports_or_types = int(rule.from_port)
     else:
-        ports_or_types = (rule.from_port, rule.to_port)
+        ports_or_types = (int(rule.from_port), int(rule.to_port))
     return expand_sources(rule_dict(parse_grants(rule.grants),
                                     group.name,
                                     rule.ip_protocol,
