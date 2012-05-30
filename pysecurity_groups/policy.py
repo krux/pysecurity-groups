@@ -12,6 +12,7 @@ import re
 from util import expand_sources, rule_dict
 
 
+POLICY = None
 POLICY_VARS = {}
 VAR_REGEX = re.compile(r'@[\w-]*')
 PROTO_SEPARATOR = ':'
@@ -38,7 +39,11 @@ def parse(config):
                             for name, value in config.items('VARIABLES')])
         config.remove_section('VARIABLES')
 
-    return reduce(concat, [rules(group, config) for group in groups(config)])
+    ### Set up the global policy variable
+    global POLICY
+    POLICY = config
+
+    return reduce(concat, [rules(group) for group in groups(config)])
 
 
 def groups(policy):
@@ -50,11 +55,11 @@ def groups(policy):
                     if section not in SPECIAL_CONFIG_SECTIONS]])
 
 
-def rules(group, policy):
+def rules(group):
     """
-    Given a GROUP and a POLICY, parse the rules for that GROUP from the POLICY
-    and return them (as a list of dicts). Rules which specify lists of sources
-    or ports are expanded into multiple rules. Variables used by the rules are
+    Given a GROUP parse the rules for that GROUP from the policy and return
+    them (as a list of dicts). Rules which specify lists of sources or ports
+    are expanded into multiple rules. Variables used by the rules are
     expanded.
     """
     ### This outer comprehension gives us a list of lists of dicts
@@ -69,8 +74,8 @@ def rules(group, policy):
                            ### rulespec).
                            [(group, source, rule)
                             for source, rule
-                            in expand_variables(policy.items('GLOBAL')) +
-                            expand_variables(policy.items(group))]])
+                            in expand_variables(POLICY.items('GLOBAL')) +
+                            expand_variables(POLICY.items(group))]])
 
 
 def expand_variables(items):
@@ -156,6 +161,8 @@ def parse_sources(sources):
     Given a SOURCES string, expand all variables and split it into a list if
     it is in list form.
     """
+    if sources == '*':
+        sources = list(groups(POLICY))
     if LIST_SEPARATOR in sources:
         sources = [source.strip() for source in sources.split(LIST_SEPARATOR)]
     if type(sources) is not list:
