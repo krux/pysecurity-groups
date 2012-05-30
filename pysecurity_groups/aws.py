@@ -73,7 +73,8 @@ def parse_grants(grants):
 
 def groups(region):
     """
-    Given a REGION, return the set of all security groups defined in that REGION.
+    Given a REGION, return the list of all security groups defined in that
+    REGION.
     """
-    return set([group.name for group in
-                connect_to_region(region).get_all_security_groups()])
+    return [group.name for group in
+            connect_to_region(region).get_all_security_groups()]
