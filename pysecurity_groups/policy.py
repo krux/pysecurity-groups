@@ -101,7 +101,8 @@ def replace_var(varstring, variable):
     Given a VARSTRING and a VARIABLE, return a string with all instances of
     VARIABLE in VARSTRING replaced by their value.
     """
-    return re.sub(re.compile(variable + r'\b([^-]|$)'), lookup(variable) + r'\1', varstring)
+    return re.sub(re.compile(variable + r'\b([^-]|$)'),
+                  lookup(variable) + r'\1', varstring)
 
 
 def parse_rule(rule):
