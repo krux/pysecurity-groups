@@ -212,9 +212,9 @@ def expand_spec(rule):
     Given a RULE (as a dict) that specifies a list of ports/types, return a
     list of rules, one for each port/type.
     """
-    if type(rule['ports_or_types']) in [int, tuple]:
+    if type(rule['port/type']) in [int, tuple]:
         return [rule]
-    return [rule_dict(rule['sources'],
+    return [rule_dict(rule['source'],
                       rule['target'],
                       rule['protocol'],
-                      port) for port in rule['ports_or_types']]
+                      port) for port in rule['port/type']]

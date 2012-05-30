@@ -83,10 +83,10 @@ def rule_dict(sources, target, protocol, spec):
     * SPEC is the list of ports (tcp/udp) or types (icmp) this rule
       allows.
     """
-    return {'sources': sources,
+    return {'source': sources,
             'target': target,
             'protocol': protocol,
-            'ports_or_types': spec}
+            'port/type': spec}
 
 
 def expand_sources(rule):
@@ -96,7 +96,7 @@ def expand_sources(rule):
     return [rule_dict(source,
                       rule['target'],
                       rule['protocol'],
-                      rule['ports_or_types']) for source in rule['sources']]
+                      rule['port/type']) for source in rule['source']]
 
 
 def regions(config):
