@@ -1,5 +1,6 @@
 pysecurity_groups
 =================
+```
 usage: security-groups [-h] [-c CONFIG] [-r REGION] [--no-headers]
                        [--groups-only | --rules-only]
                        {policy,diff,aws-policy,sync,update} ...
@@ -37,3 +38,4 @@ Sub-Commands:
                         Adds new groups/rules, but does NOT remove
                         groups/rules that are not defined in the configuration
                         file.
+```
