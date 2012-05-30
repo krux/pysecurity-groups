@@ -6,7 +6,6 @@
 
 """Command line interface for pysecurity-groups."""
 
-from collections import defaultdict
 import ConfigParser
 import errno
 from operator import itemgetter
@@ -14,9 +13,10 @@ import sys
 
 from argparse import ArgumentParser
 
-import policy as policy
-import util as util
 import aws as aws
+import policy as policy
+import report as report
+import util as util
 
 
 if __name__ == '__main__':
@@ -86,6 +86,16 @@ def get_parser():
     parser.add_argument('-r', '--region', help="""Region to manage security
                         groups in. Can be specified multiple times. Default:
                         us-east-1""", action='append')
+    parser.add_argument('--no-headers', help="""Don't output header lines.""",
+                        action='store_false', dest='headers', default=True)
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--groups-only', help="""Only report/operate on
+                        security groups, not rules.""", action='store_true',
+                        default=False)
+    group.add_argument('--rules-only', help="""Only report/operate on security
+                       rules, not groups. NOTE: This can lead to errors if
+                       your groups are not already correctly defined in AWS.""",
+                       action='store_true', default=False)
 
     ##########################################
     ### Sub-command parsers and arguments. ###
@@ -95,39 +105,39 @@ def get_parser():
 
     ### 'policy' subcommand
     policy_parser = subparsers.add_parser('policy', help="""Generate a report
-                                          detailing your desired configuration
+                                          detailing your desired groups/rules
                                           as parsed by this command.""")
     policy_parser.set_defaults(dispatch_fn=policy_report)
 
-    ### 'report' subcommand
-    report_parser = subparsers.add_parser('report', help="""Generate a report
-                                          showing the differences between
-                                          your desired configuration and your
-                                          current security groups/rules.""")
-    report_parser.set_defaults(dispatch_fn=report)
+    ### 'aws-policy' subcommand
+    aws_policy_parser = subparsers.add_parser('aws-policy', help="""Generate a
+                                              report detailing your current
+                                              groups/rules as reported by the
+                                              AWS API.""")
+    aws_policy_parser.set_defaults(dispatch_fn=aws_policy)
 
-    ### 'live-rules' subcommand
-    live_parser = subparsers.add_parser('live-rules', help="""Generate a
-                                        report detailing your current security
-                                        groups/rules as reported by the AWS
-                                        API.""")
-    live_parser.set_defaults(dispatch_fn=live_rules)
+    ### 'diff' subcommand
+    diff_parser = subparsers.add_parser('diff', help="""Generate a report
+                                        showing the differences between your
+                                        desired groups/rules and your current
+                                        groups/rules.""")
+    diff_parser.set_defaults(dispatch_fn=diff)
 
     ### 'sync' subcommand
-    sync_parser = subparsers.add_parser('sync', help="""Synchronize security
-                                        groups with your desired configuration.
-                                        Adds new groups/rules and REMOVES
-                                        groups/rules not defined in the
-                                        configuration file.""")
+    sync_parser = subparsers.add_parser('sync', help="""Synchronize
+                                        groups/rules with your configured
+                                        policy. Adds new groups/rules and
+                                        REMOVES groups/rules not defined in
+                                        the configuration file.""")
     sync_parser.set_defaults(dispatch_fn=sync)
 
     ### 'update' subcommand
-    update_parser = subparsers.add_parser('update', help="""Update security
-                                          groups to match your desired
-                                          configuration. Adds new groups/rules,
-                                          but does NOT remove groups/rules that
-                                          are not defined in the configuration
-                                          file.""")
+    update_parser = subparsers.add_parser('update', help="""Update
+                                          groups/rules to match your
+                                          configured policy. Adds new
+                                          groups/rules, but does NOT remove
+                                          groups/rules that are not defined in
+                                          the configuration file.""")
     update_parser.set_defaults(dispatch_fn=update)
 
     return parser
@@ -135,85 +145,153 @@ def get_parser():
 
 def policy_report(config, args):
     """
-    Output a report detailing the policy parsed from the configuration file.
+    Generate a report detailing your desired groups/rules as parsed by this
+    command.
     """
-    ### Mapping from column headers to rule key for that column.
-    headers = ['REGION', 'SOURCE', 'TARGET', 'PROTOCOL', 'PORT/TYPE']
-    hmap = {'REGION': {'key': 'region'},
-            'SOURCE': {'key': 'sources'},
-            'TARGET': {'key': 'target'},
-            'PROTOCOL': {'key': 'protocol'},
-            'PORT/TYPE': {'key': 'ports_or_types'}}
     regions = util.regions(config)
-    rules = sorted([dict([('region', region)] + rule.items())
-                    for rule in policy.parse(config)
-                    for region in regions], key=itemgetter('region'))
-    hmap = util.header_widths(hmap, rules)
-    print util.format_headers(headers, hmap)
-    for rule in rules:
-        print util.format_rule(rule, headers, hmap)
+    region_width = report.column_width(['REGION'] + regions)
+    if not args.rules_only:
+        if args.headers:
+            print 'REGION'.ljust(region_width) + 'GROUP'
+        for region in regions:
+            for group in policy.groups(config):
+                print region.ljust(region_width) + group
+    if not args.groups_only:
+        headers = ['REGION', 'SOURCE', 'TARGET', 'PROTOCOL', 'PORT/TYPE']
+        ### Every rule in the policy, duplicated to each region we're
+        ### managing, sorted by region.
+        ###
+        ### dict([('region', region)] + rule.items()) adds the 'region' key to
+        ### the rule (which is stored as a dict) without updating it in-place.
+        rules = [dict([('region', region)] + rule.items())
+                 for rule in policy.parse(config)
+                 for region in regions]
+        ### The inner list comprehension gives us a list of the data values
+        ### from the rule dicts corresponding to the header. So, when header
+        ### is 'SOURCE', the inner comprehension gives us a list of values of
+        ### rule['source'] for every rule. To this list we pre-pend the header
+        ### itself so the label width is accounted for in the calculation of
+        ### the column width.
+        ###
+        ### The outer list comprehension repeats the above for each header.
+        widths = report.column_widths([[header] +
+                                       [rule[header.lower()]
+                                        for rule in rules]
+                                       for header in headers])
+        if args.headers:
+            print ''.join([header.ljust(widths[index])
+                           for index, header in enumerate(headers)])
+        for rule in sorted(rules, key=itemgetter('region')):
+            print ''.join([report.format(rule[hdr.lower()]).ljust(widths[index])
+                           for index, hdr in enumerate(headers)])
 
 
-def live_rules(config, args):
+def aws_policy(config, args):
     """
-    Output a report detailing the policy defined in AWS.
+    Generate a report detailing your current groups/rules as reported by the
+    AWS API.
     """
-    headers = ['REGION', 'SOURCE', 'TARGET', 'PROTOCOL', 'PORT/TYPE']
-    hmap = {'REGION': {'key': 'region'},
-            'SOURCE': {'key': 'sources'},
-            'TARGET': {'key': 'target'},
-            'PROTOCOL': {'key': 'protocol'},
-            'PORT/TYPE': {'key': 'ports_or_types'}}
-    rules = aws.policy(config)
-    hmap = util.header_widths(hmap, rules)
-    print util.format_headers(headers, hmap)
-    for rule in rules:
-        print util.format_rule(rule, headers, hmap)
-
-
-def report(config, args):
-    """
-    Output a report detailing the differences between the configured policy
-    and the live rules as reported by the AWS API.
-    """
-    headers = ['ACTION', 'GROUP', 'REGION']
-    hmap = defaultdict(dict)
-    ### The width of the ACTION column is just the padded width of
-    ### 'ACTION', because the action is one of: ['ADD', 'REMOVE',
-    ### 'CREATE', 'DELETE'] all of which fit.
-    hmap['ACTION']['width'] = len('ACTION') + 2
     regions = util.regions(config)
-    ### The width of the REGION column is the greater of the padded width
-    ### of the widest region name and the padded width of 'REGION'
-    hmap['REGION']['width'] = max(len('REGION') + 2,
-                                  max([len(region) + 2
-                                       for region in regions]))
-    policy_groups = policy.groups(config)
-    policy_groups = dict([(region, policy_groups) for region in regions])
-    live_groups = dict([(region, aws.groups(region)) for region in regions])
-    ### The width of the GROUP column is the greater of the padded width
-    ### of the widest group name and the padded width of 'GROUP'.
-    all_groups = reduce(lambda a, b: a.union(b),
-                        [policy_groups[region].union(live_groups[region])
-                         for region in regions])
-    hmap['GROUP']['width'] = max(len('GROUP') + 2,
-                                 max([len(group) + 2
-                                      for group in all_groups]))
-    ### Now we actually start outputting the report, yay!
-    print util.format_headers(headers, hmap)
-    add_groups = [(group, reg) for reg in regions for group in
-                  policy_groups[reg].difference(live_groups[reg])]
-    del_groups = [(group, reg) for reg in regions for group in
-                  live_groups[reg].difference(policy_groups[reg])]
-    actions = util.format_group_actions(add_groups, hmap, 'CREATE')
-    actions += util.format_group_actions(del_groups, hmap, 'DELETE')
-    for action, group, region in actions:
-        print '%s%s%s' % (action, group, region)
+    region_width = report.column_width(['REGION'] + regions)
+    if not args.rules_only:
+        if args.headers:
+            print 'REGION'.ljust(region_width) + 'GROUP'
+        for region in regions:
+            for group in aws.groups(region):
+                print region.ljust(region_width) + group
+    if not args.groups_only:
+        headers = ['REGION', 'SOURCE', 'TARGET', 'PROTOCOL', 'PORT/TYPE']
+        rules = aws.policy(config)
+        ### The inner list comprehension gives us a list of the data values
+        ### from the rule dicts corresponding to the header. So, when header
+        ### is 'SOURCE', the inner comprehension gives us a list of values of
+        ### rule['source'] for every rule. To this list we pre-pend the header
+        ### itself so the label width is accounted for in the calculation of
+        ### the column width.
+        ###
+        ### The outer list comprehension repeats the above for each header.
+        widths = report.column_widths([[header] +
+                                       [rule[header.lower()]
+                                        for rule in rules]
+                                       for header in headers])
+        if args.headers:
+            print ''.join([header.ljust(widths[index])
+                           for index, header in enumerate(headers)])
+        for rule in rules:
+            print ''.join([report.format(rule[hdr.lower()]).ljust(widths[index])
+                           for index, hdr in enumerate(headers)])
 
 
-def sync(config, args):
-    pass
+def diff(config, args):
+    """
+    Generate a report showing the differences between your desired
+    groups/rules and your current groups/rules.
+    """
+    regions = util.regions(config)
+    if not args.rules_only:
+        policy_groups = dict([(region, set(policy.groups(config)))
+                              for region in regions])
+        aws_groups = dict([(region, set(aws.groups(region)))
+                           for region in regions])
+        all_groups = reduce(lambda a, b: a.union(b),
+                            [policy_groups[region].union(aws_groups[region])
+                             for region in regions])
+        headers = ['ACTION', 'GROUP', 'REGION']
+        actions = ['CREATE', 'DELETE']
+        widths = [report.column_width(['ACTION'] + actions),
+                  report.column_width(['GROUP'] + list(all_groups)),
+                  report.column_width(['REGION'] + regions)]
+        if args.headers:
+            print ''.join([header.ljust(widths[index])
+                           for index,header in enumerate(headers)])
+        actions = [('CREATE', group, reg)
+                   for reg in regions
+                   for group in policy_groups[reg].difference(aws_groups[reg])]
+        actions += [('DELETE', group, reg)
+                    for reg in regions
+                    for group in aws_groups[reg].difference(policy_groups[reg])]
+        for action, group, region in actions:
+            print '%s%s%s' % (action.ljust(widths[0]),
+                              group.ljust(widths[1]),
+                              region.ljust(widths[2]))
+    if not args.groups_only:
+        headers = ['ACTION', 'REGION', 'SOURCE',
+                   'TARGET', 'PROTOCOL', 'PORT/TYPE']
+        actions = ['ADD', 'REMOVE']
+        policy_rules = [dict([('region', region)] + rule.items())
+                        for rule in policy.parse(config)
+                        for region in regions]
+        aws_rules = aws.policy(config)
+        widths = report.column_widths([[header] +
+                                       [rule[header.lower()]
+                                        for rule in policy_rules + aws_rules]
+                                       for header in headers[1:]])
+        widths = [report.column_width(['ACTION'] + actions)] + widths
+        if args.headers:
+            print ''.join([header.ljust(widths[index])
+                           for index, header in enumerate(headers)])
+        actions = [dict([('action', 'ADD')] + rule.items())
+                   for rule in policy_rules if rule not in aws_rules]
+        actions += [dict([('action', 'REMOVE')] + rule.items())
+                    for rule in aws_rules if rule not in policy_rules]
+        for act in sorted(actions, key=itemgetter('region')):
+            print ''.join([report.format(act[hdr.lower()]).ljust(widths[index])
+                           for index, hdr in enumerate(headers)])
 
 
 def update(config, args):
+    """
+    Update groups/rules to match your configured policy. Adds new
+    groups/rules, but does NOT remove groups/rules that are not defined in the
+    configuration file.
+    """
+    pass
+
+
+def sync(config, args):
+    """
+    Synchronize groups/rules with your configured policy. Adds new
+    groups/rules and REMOVES groups/rules not defined in the configuration
+    file.
+    """
     pass
