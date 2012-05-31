@@ -61,7 +61,11 @@ being a security group to manage; there are three "special" headings,
   options. Configuration options are:
   - `regions`: A comma-separated list of regions to manage security
     groups/rules in.
-
+  - `account-id`: Your AWS account ID. If this is not set,
+    `security-groups` will query AWS for it. <em>Due to limitations in
+    the AWS API, this query will fail if you do not have at least one
+    security group in one of the regions `security-groups` is
+    configured to connect to.</em>
 - The `VARIABLES` section defines variables which can be used in the
   security group sections for clarity or to save typing. A variable is
   defined as `name = value` - for example:

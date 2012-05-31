@@ -6,6 +6,7 @@
 
 """AWS functions for pysecurity-groups."""
 
+from ConfigParser import NoOptionError
 from operator import concat
 
 ### The code which reads the boto configuration files only runs when you
@@ -13,9 +14,17 @@ from operator import concat
 ### it.
 import boto
 from boto.ec2 import connect_to_region
+from boto.exception import BotoClientError, BotoServerError
 
 from util import expand_sources, rule_dict
 
+
+class AccountIDError(StandardError):
+    """
+    Error raised when no account ID is configured and the account ID cannot be
+    queried from AWS.
+    """
+    pass
 
 def policy(config):
     """
@@ -78,3 +87,27 @@ def groups(region):
     """
     return [group.name for group in
             connect_to_region(region).get_all_security_groups()]
+
+
+def account_id(config):
+    """
+    Given a CONFIG, return the account-id configuration value if it is set,
+    otherwise query AWS for the account ID and raise an exception if one is
+    not found.
+    """
+    try:
+        account_id = config.get('CONFIG', 'account-id')
+    except NoOptionError:
+        account_id = None
+        regions = [region.strip()
+                   for region in config.get('CONFIG', 'regions').split(',')]
+        while (account_id is None) and regions:
+            region = regions.pop()
+            try:
+                account_id = connect_to_region(region).get_all_security_groups()[0].owner_id
+            except (BotoClientError, BotoServerError):
+                pass
+        if account_id is None:
+            raise AccountIDError()
+    config.set('CONFIG', 'account-id', account_id)
+    return account_id
