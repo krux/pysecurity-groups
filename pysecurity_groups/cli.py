@@ -25,10 +25,6 @@ import report as report
 import util as util
 
 
-if __name__ == '__main__':
-    sys.exit(main())
-
-
 def main():
     """
     Entry point for the pysecurity_groups CLI.
