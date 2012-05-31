@@ -379,7 +379,7 @@ def sync(config, args):
                 action = 'FAILED ADDING'
                 if args.debug:
                     print 'DEBUG: %s' % exc
-                template = '%s FROM: %s TO: %s PROTOCOL: %s PORT/TYPE: %s'
+            template = '%s   FROM: %s TO: %s PROTOCOL: %s PORT/TYPE: %s'
             print template % (action, rule['source'], rule['target'],
                               rule['protocol'], rule['port/type'])
         del_rules = [rule for rule in aws_rules if rule not in policy_rules]
@@ -394,6 +394,6 @@ def sync(config, args):
                 action = 'FAILED REMOVING'
                 if args.debug:
                     print 'DEBUG: %s' % exc
-                template = '%s FROM: %s TO: %s PROTOCOL: %s PORT/TYPE: %s'
+            template = '%s   FROM: %s TO: %s PROTOCOL: %s PORT/TYPE: %s'
             print template % (action, rule['source'], rule['target'],
                               rule['protocol'], rule['port/type'])
