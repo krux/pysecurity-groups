@@ -66,23 +66,28 @@ being a security group to manage; there are three "special" headings,
   security group sections for clarity or to save typing. A variable is
   defined as `name = value` - for example:
 
-      [VARIABLES]
-      any-ip = 0.0.0.0/0
+  ```
+  [VARIABLES]
+  any-ip = 0.0.0.0/0
+  ```
 
   Variables are referred to using `@name`:
 
-      [default]
-      @any-ip: tcp:22
+  ```
+  [default]
+  @any-ip: tcp:22
+  ```
 
   Variables are expanded by text substitution, so anything that is
   valid where you use a variable reference is a valid value for the
   variable. Variables can **not** refer to other variables,
   however. This is invalid:
 
-      [VARIABLES]
-      puppet-master-east = 10.0.0.1
-      puppet-master-west = 10.0.0.2
-      puppet-masters = @puppet-master-east, @puppet-master-west
-
+  ```
+  [VARIABLES]
+  puppet-master-east = 10.0.0.1
+  puppet-master-west = 10.0.0.2
+  puppet-masters = @puppet-master-east, @puppet-master-west
+  ```
 - Rules defined in the `GLOBAL` section are applied to *all* security
   groups.
