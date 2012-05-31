@@ -39,7 +39,7 @@ def parse(config):
     global POLICY
     POLICY = config
 
-    return reduce(concat, [rules(group) for group in groups(config)])
+    return reduce(concat, [rules(group) for group in groups(config)], [])
 
 
 def groups(policy):
