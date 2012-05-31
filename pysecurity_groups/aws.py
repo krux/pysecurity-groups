@@ -96,21 +96,22 @@ def account_id(config):
     not found.
     """
     try:
-        account_id = config.get('CONFIG', 'account-id')
+        account = config.get('CONFIG', 'account-id')
     except NoOptionError:
-        account_id = None
+        account = None
         regions = [region.strip()
                    for region in config.get('CONFIG', 'regions').split(',')]
-        while (account_id is None) and regions:
+        while (account is None) and regions:
             region = regions.pop()
             try:
-                account_id = connect_to_region(region).get_all_security_groups()[0].owner_id
+                group = connect_to_region(region).get_all_security_groups()[0]
+                account = group.owner_id
             except (BotoClientError, BotoServerError):
                 pass
-        if account_id is None:
+        if account is None:
             raise AccountIDError()
-    config.set('CONFIG', 'account-id', account_id)
-    return account_id
+    config.set('CONFIG', 'account-id', account)
+    return account
 
 
 def authorize(rule, owner):

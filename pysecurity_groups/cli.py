@@ -328,11 +328,9 @@ def update(config, args):
                 action = 'FAILED AUTHORIZING'
                 if args.debug:
                     print 'DEBUG: %s' % exc
-            print '%s FROM: %s TO: %s PROTOCOL: %s PORT/TYPE: %s' % (action,
-                                                                     rule['source'],
-                                                                     rule['target'],
-                                                                     rule['protocol'],
-                                                                     rule['port/type'])
+                template = '%s FROM: %s TO: %s PROTOCOL: %s PORT/TYPE: %s'
+            print template % (action, rule['source'], rule['target'],
+                              rule['protocol'], rule['port/type'])
 
 
 def sync(config, args):

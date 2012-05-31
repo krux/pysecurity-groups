@@ -37,12 +37,16 @@ def expand_sources(rule):
 
 
 def as_cidr(source):
+    """
+    If SOURCE looks like an IP address, add a CIDR suffix to it. Otherwise,
+    return it unchanged.
+    """
     try:
-        ip = IP(source)
+        src_ip = IP(source)
         if '/' in source:
             return source
         else:
-            return ip.strNormal() + '/' + str(ip.prefixlen())
+            return src_ip.strNormal() + '/' + str(src_ip.prefixlen())
     except ValueError:
         return source
 
