@@ -321,11 +321,11 @@ def update(config, args):
             try:
                 result = aws.authorize(rule, account_id)
                 if result:
-                    action = 'AUTHORIZED'
+                    action = 'ADDED'
                 else:
-                    action = 'FAILED AUTHORIZING'
+                    action = 'FAILED ADDING'
             except (BotoClientError, BotoServerError), exc:
-                action = 'FAILED AUTHORIZING'
+                action = 'FAILED ADDING'
                 if args.debug:
                     print 'DEBUG: %s' % exc
                 template = '%s FROM: %s TO: %s PROTOCOL: %s PORT/TYPE: %s'
@@ -339,4 +339,65 @@ def sync(config, args):
     groups/rules and REMOVES groups/rules not defined in the configuration
     file.
     """
-    pass
+    regions = util.regions(config)
+    account_id = aws.account_id(config)
+    if not args.rules_only:
+        policy_groups = dict([(region, set(policy.groups(config)))
+                              for region in regions])
+        aws_groups = dict([(region, set(aws.groups(region)))
+                           for region in regions])
+        for region in regions:
+            conn = connect_to_region(region)
+            for group in policy_groups[region].difference(aws_groups[region]):
+                try:
+                    conn.create_security_group(group, description='.')
+                    action = 'CREATED'
+                except (BotoClientError, BotoServerError), exc:
+                    action = 'FAILED CREATING'
+                    if args.debug:
+                        print 'DEBUG: %s' % exc
+                print '%s %s in %s' % (action, group, region)
+            for group in aws_groups[region].difference(policy_groups[region]):
+                try:
+                    conn.delete_security_group(group)
+                    action = 'DELETED'
+                except (BotoClientError, BotoServerError), exc:
+                    action = 'FAILED DELETING'
+                    if args.debug:
+                        print 'DEBUG: %s' % exc
+                print '%s %s in %s' % (action, group, region)
+    if not args.groups_only:
+        policy_rules = [dict([('region', region)] + rule.items())
+                        for rule in policy.parse(config)
+                        for region in regions]
+        aws_rules = aws.policy(config)
+        add_rules = [rule for rule in policy_rules if rule not in aws_rules]
+        for rule in add_rules:
+            try:
+                result = aws.authorize(rule, account_id)
+                if result:
+                    action = 'ADDED'
+                else:
+                    action = 'FAILED ADDING'
+            except (BotoClientError, BotoServerError), exc:
+                action = 'FAILED ADDING'
+                if args.debug:
+                    print 'DEBUG: %s' % exc
+                template = '%s FROM: %s TO: %s PROTOCOL: %s PORT/TYPE: %s'
+            print template % (action, rule['source'], rule['target'],
+                              rule['protocol'], rule['port/type'])
+        del_rules = [rule for rule in aws_rules if rule not in policy_rules]
+        for rule in del_rules:
+            try:
+                result = aws.revoke(rule, account_id)
+                if result:
+                    action = 'REMOVED'
+                else:
+                    action = 'FAILED REMOVING'
+            except (BotoClientError, BotoServerError), exc:
+                action = 'FAILED REMOVING'
+                if args.debug:
+                    print 'DEBUG: %s' % exc
+                template = '%s FROM: %s TO: %s PROTOCOL: %s PORT/TYPE: %s'
+            print template % (action, rule['source'], rule['target'],
+                              rule['protocol'], rule['port/type'])

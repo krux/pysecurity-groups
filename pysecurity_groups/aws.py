@@ -121,13 +121,11 @@ def authorize(rule, owner):
     or a security group.
     """
     conn = connect_to_region(rule['region'])
-
     if type(rule['port/type']) is tuple:
         from_port, to_port = rule['port/type']
     else:
         from_port = rule['port/type']
         to_port = from_port
-
     if '/' in rule['source']: ### source is a CIDR address
         return conn.authorize_security_group(rule['target'],
                                              ip_protocol=rule['protocol'],
@@ -140,3 +138,29 @@ def authorize(rule, owner):
                                          ip_protocol=rule['protocol'],
                                          from_port=from_port,
                                          to_port=to_port)
+
+
+def revoke(rule, owner):
+    """
+    Given a RULE dict and OWNER (an AWS account ID), call the correct
+    de-authorization method based on whether the rule's source is a CIDR
+    address or a security group.
+    """
+    conn = connect_to_region(rule['region'])
+    if type(rule['port/type']) is tuple:
+        from_port, to_port = rule['port/type']
+    else:
+        from_port = rule['port/type']
+        to_port = from_port
+    if '/' in rule['source']: ### source is a CIDR address
+        return conn.revoke_security_group(rule['target'],
+                                          ip_protocol=rule['protocol'],
+                                          from_port=from_port,
+                                          to_port=to_port,
+                                          cidr_ip=rule['source'])
+    return conn.revoke_security_group(rule['target'],
+                                      src_security_group_name=rule['source'],
+                                      src_security_group_owner_id=owner,
+                                      ip_protocol=rule['protocol'],
+                                      from_port=from_port,
+                                      to_port=to_port)
