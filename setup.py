@@ -7,7 +7,7 @@
 from setuptools import setup, find_packages
 
 setup(name='pysecurity-groups',
-      version="0.0.1",
+      version="1.0.0",
       description='Library for working with EC2 security groups in bulk.',
       author='Paul Lathrop',
       author_email='paul@krux.com',
