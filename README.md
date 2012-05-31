@@ -74,7 +74,7 @@ being a security group to manage; there are three "special" headings,
   Variables are referred to using `@name`:
 
   ```
-  [default]
+  [example-group]
   @any-ip: tcp:22
   ```
 
