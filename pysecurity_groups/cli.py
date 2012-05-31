@@ -337,31 +337,6 @@ def sync(config, args):
     """
     regions = util.regions(config)
     account_id = aws.account_id(config)
-    if not args.rules_only:
-        policy_groups = dict([(region, set(policy.groups(config)))
-                              for region in regions])
-        aws_groups = dict([(region, set(aws.groups(region)))
-                           for region in regions])
-        for region in regions:
-            conn = connect_to_region(region)
-            for group in policy_groups[region].difference(aws_groups[region]):
-                try:
-                    conn.create_security_group(group, description='.')
-                    action = 'CREATED'
-                except (BotoClientError, BotoServerError), exc:
-                    action = 'FAILED CREATING'
-                    if args.debug:
-                        print 'DEBUG: %s' % exc
-                print '%s %s in %s' % (action, group, region)
-            for group in aws_groups[region].difference(policy_groups[region]):
-                try:
-                    conn.delete_security_group(group)
-                    action = 'DELETED'
-                except (BotoClientError, BotoServerError), exc:
-                    action = 'FAILED DELETING'
-                    if args.debug:
-                        print 'DEBUG: %s' % exc
-                print '%s %s in %s' % (action, group, region)
     if not args.groups_only:
         policy_rules = [dict([('region', region)] + rule.items())
                         for rule in policy.parse(config)
@@ -397,3 +372,28 @@ def sync(config, args):
             template = '%s   FROM: %s TO: %s PROTOCOL: %s PORT/TYPE: %s'
             print template % (action, rule['source'], rule['target'],
                               rule['protocol'], rule['port/type'])
+    if not args.rules_only:
+        policy_groups = dict([(region, set(policy.groups(config)))
+                              for region in regions])
+        aws_groups = dict([(region, set(aws.groups(region)))
+                           for region in regions])
+        for region in regions:
+            conn = connect_to_region(region)
+            for group in policy_groups[region].difference(aws_groups[region]):
+                try:
+                    conn.create_security_group(group, description='.')
+                    action = 'CREATED'
+                except (BotoClientError, BotoServerError), exc:
+                    action = 'FAILED CREATING'
+                    if args.debug:
+                        print 'DEBUG: %s' % exc
+                print '%s %s in %s' % (action, group, region)
+            for group in aws_groups[region].difference(policy_groups[region]):
+                try:
+                    conn.delete_security_group(group)
+                    action = 'DELETED'
+                except (BotoClientError, BotoServerError), exc:
+                    action = 'FAILED DELETING'
+                    if args.debug:
+                        print 'DEBUG: %s' % exc
+                print '%s %s in %s' % (action, group, region)
