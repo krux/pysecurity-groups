@@ -13,7 +13,7 @@ setup(name='pysecurity-groups',
       author_email='paul@krux.com',
       url='https://github.com/krux/pysecurity-groups',
       packages=find_packages(),
-      install_requires=['boto', 'argparse'],
+      install_requires=['boto', 'argparse', 'IPy'],
       entry_points={'console_scripts':
                     ['security-groups = pysecurity_groups.cli:main'] },
       )

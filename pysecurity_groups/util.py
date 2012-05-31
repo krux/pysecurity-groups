@@ -6,6 +6,8 @@
 
 """Utility functions for pysecurity-groups."""
 
+from IPy import IP
+
 
 def rule_dict(sources, target, protocol, spec):
     """
@@ -28,10 +30,21 @@ def expand_sources(rule):
     """
     Given a RULE (as a dict) return a list of rules, one for each source.
     """
-    return [rule_dict(source,
+    return [rule_dict(as_cidr(source),
                       rule['target'],
                       rule['protocol'],
                       rule['port/type']) for source in rule['source']]
+
+
+def as_cidr(source):
+    try:
+        ip = IP(source)
+        if '/' in source:
+            return source
+        else:
+            return ip.strNormal() + '/' + str(ip.prefixlen())
+    except ValueError:
+        return source
 
 
 def regions(config):
