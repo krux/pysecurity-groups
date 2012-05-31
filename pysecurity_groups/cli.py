@@ -12,6 +12,12 @@ from operator import itemgetter
 import sys
 
 from argparse import ArgumentParser
+### The code which reads the boto configuration files only runs when you
+### import boto, so even though we aren't using the module, we need to import
+### it to load credentials, etc.
+import boto
+from boto.ec2 import connect_to_region
+from boto.exception import BotoClientError, BotoServerError
 
 import aws as aws
 import policy as policy
@@ -88,6 +94,8 @@ def get_parser():
                         us-east-1""", action='append')
     parser.add_argument('--no-headers', help="""Don't output header lines.""",
                         action='store_false', dest='headers', default=True)
+    parser.add_argument('--debug', help="""Print exceptions.""",
+                        action='store_true', default=False)
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--groups-only', help="""Only report/operate on
                         security groups, not rules.""", action='store_true',
@@ -285,7 +293,44 @@ def update(config, args):
     groups/rules, but does NOT remove groups/rules that are not defined in the
     configuration file.
     """
-    pass
+    regions = util.regions(config)
+    account_id = aws.account_id(config)
+    if not args.rules_only:
+        policy_groups = dict([(region, set(policy.groups(config)))
+                              for region in regions])
+        aws_groups = dict([(region, set(aws.groups(region)))
+                           for region in regions])
+        for region in regions:
+            conn = connect_to_region(region)
+            for group in policy_groups[region].difference(aws_groups[region]):
+                try:
+                    conn.create_security_group(group, description='.')
+                    action = 'CREATED'
+                except (BotoClientError, BotoServerError), exc:
+                    action = 'FAILED CREATING'
+                    if args.debug:
+                        print 'DEBUG: %s' % exc
+                print '%s %s in %s' % (action, group, region)
+    if not args.groups_only:
+        policy_rules = [dict([('region', region)] + rule.items())
+                        for rule in policy.parse(config)
+                        for region in regions]
+        aws_rules = aws.policy(config)
+        update_rules = [rule for rule in policy_rules if rule not in aws_rules]
+        for rule in update_rules:
+            try:
+                result = aws.authorize(rule, account_id)
+                if result:
+                    action = 'AUTHORIZED'
+                else:
+                    action = 'FAILED AUTHORIZING'
+            except (BotoClientError, BotoServerError), exc:
+                action = 'FAILED AUTHORIZING'
+                if args.debug:
+                    print 'DEBUG: %s' % exc
+                template = '%s FROM: %s TO: %s PROTOCOL: %s PORT/TYPE: %s'
+            print template % (action, rule['source'], rule['target'],
+                              rule['protocol'], rule['port/type'])
 
 
 def sync(config, args):

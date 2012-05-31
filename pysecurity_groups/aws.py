@@ -6,6 +6,7 @@
 
 """AWS functions for pysecurity-groups."""
 
+from ConfigParser import NoOptionError
 from operator import concat
 
 ### The code which reads the boto configuration files only runs when you
@@ -13,9 +14,17 @@ from operator import concat
 ### it.
 import boto
 from boto.ec2 import connect_to_region
+from boto.exception import BotoClientError, BotoServerError
 
 from util import expand_sources, rule_dict
 
+
+class AccountIDError(StandardError):
+    """
+    Error raised when no account ID is configured and the account ID cannot be
+    queried from AWS.
+    """
+    pass
 
 def policy(config):
     """
@@ -78,3 +87,56 @@ def groups(region):
     """
     return [group.name for group in
             connect_to_region(region).get_all_security_groups()]
+
+
+def account_id(config):
+    """
+    Given a CONFIG, return the account-id configuration value if it is set,
+    otherwise query AWS for the account ID and raise an exception if one is
+    not found.
+    """
+    try:
+        account = config.get('CONFIG', 'account-id')
+    except NoOptionError:
+        account = None
+        regions = [region.strip()
+                   for region in config.get('CONFIG', 'regions').split(',')]
+        while (account is None) and regions:
+            region = regions.pop()
+            try:
+                group = connect_to_region(region).get_all_security_groups()[0]
+                account = group.owner_id
+            except (BotoClientError, BotoServerError):
+                pass
+        if account is None:
+            raise AccountIDError()
+    config.set('CONFIG', 'account-id', account)
+    return account
+
+
+def authorize(rule, owner):
+    """
+    Given a RULE dict and OWNER (an AWS account ID), call the correct
+    authorization method based on whether the rule's source is a CIDR address
+    or a security group.
+    """
+    conn = connect_to_region(rule['region'])
+
+    if type(rule['port/type']) is tuple:
+        from_port, to_port = rule['port/type']
+    else:
+        from_port = rule['port/type']
+        to_port = from_port
+
+    if '/' in rule['source']: ### source is a CIDR address
+        return conn.authorize_security_group(rule['target'],
+                                             ip_protocol=rule['protocol'],
+                                             from_port=from_port,
+                                             to_port=to_port,
+                                             cidr_ip=rule['source'])
+    return conn.authorize_security_group(rule['target'],
+                                         src_security_group_name=rule['source'],
+                                         src_security_group_owner_id=owner,
+                                         ip_protocol=rule['protocol'],
+                                         from_port=from_port,
+                                         to_port=to_port)
