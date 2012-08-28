@@ -7,6 +7,7 @@
 """Command line interface for pysecurity-groups."""
 
 import ConfigParser
+from cStringIO import StringIO
 import errno
 from operator import itemgetter
 import sys
@@ -52,8 +53,21 @@ def get_config(args):
     """
     Parse the configuration file and return a ConfigParser object.
     """
+    # So, ConfigParser doesn't correctly handle in-line comments in multi-line
+    # values. That's why we do this song & dance with the StringIO
+    # instance. We strip out the in-line comments, loading the result into a
+    # StringIO instance, then pass that to ConfigParser's readfp method, which
+    # reads a file-like object like StringIO.
+    stripped = StringIO()
+    with open(args.config, 'r') as handle:
+        for line in handle:
+            if ';' in line:
+                stripped.write(line[:line.index(';')] + '\n')
+            else:
+                stripped.write(line)
+    stripped.seek(0)
     config = ConfigParser.SafeConfigParser()
-    config.read(args.config)
+    config.readfp(stripped)
     ### Get the regions. Prefer regions specified on the command line, then
     ### regions specified in the config file. If neither is provided, use a
     ### sensible default.
