@@ -1,0 +1,57 @@
+# Comments are prefixed by a # character, and continue to the end of
+# the line. Block-style comments are not supported.
+
+# Variable assignment is via '=' Variable names can contain any
+# alphanumeric character, '-' and '_'. Variable names and references
+# are case-insensitive.
+ssh     = 22
+dns     = 53
+http    = 80
+tcp_udp = tcp, udp
+
+# Commas indicate a list. Trailing commas are allowed. Lists are only
+# allowed in variable declarations.
+office-ips = 1.2.3.4,
+# Lines beginning with whitespace are continuations of the previous line.
+             1.2.3.5
+
+# Variable reference is via '@'
+basic-access = @ssh, @http
+
+# Group declarations follow this format:
+# 
+# GROUP name
+# 
+# name ::= [a-zA-Z][^[:space:]]*
+GROUP default
+GROUP webservers
+GROUP dnsservers
+GROUP appservers
+
+# Rules follow this format:
+#
+# FROM source protocol start_port/type[:end_port/code] TO destination
+#
+# source          ::= user_id:source_group | cidr | *
+# user_id         ::= [0-9]{12}
+# source_group    ::= [a-zA-Z][^[:space:]]*
+# cidr            ::= valid CIDR address
+# protocol        ::= 'tcp' | 'udp' | 'icmp'
+# start_port/type ::= if protocol is 'icmp', a valid icmp type. Otherwise a port number (an int 1-65535), or '*'
+# end_port/code   ::= if protocol is 'icmp', a valid icmp code. Otherwise a port number (an int 1-65535)
+# destination     ::= [a-zA-Z][^[:space:]]*
+
+# A variable reference can be used in any field. List variables expand
+# (combinatorically) to multiple rules.
+
+# An asterisk can be used in place of the source field as shorthand
+# for the list of groups declared in the rules.
+
+# An asterisk in the start_port/type field means 'all ports' for
+# tcp/udp, and 'all type/code combinations for 'icmp'. In either case
+# it is an error to specify an end_port/code.
+
+FROM 0.0.0.0/0 tcp @basic-access TO default
+FROM 0.0.0.0/0 tcp @http TO webservers
+FROM * @tcp_udp @dns to dnsservers
+FROM webservers tcp 9000:10000 TO appservers
