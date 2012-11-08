@@ -1,3 +1,12 @@
+YOU PROBABLY DON'T WANT TO USE THIS. THE CURRENT VERSION IS FATALLY 
+FLAWED*. A REWRITE IS IN-PROGRESS.
+
+* The current version of pysecurity-groups uses an ini-style file
+  for configuration, and the ConfigParser library to parse this file.
+  The problem with this is that ConfigParser (correctly) interprets
+  multiple rules with the same source as changing a variable - only
+  one rule from a given source makes it past the parsing process.
+
 pysecurity_groups
 =================
 pysecurity-groups is a tool for managing EC2 security groups and
