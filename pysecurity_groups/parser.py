@@ -12,9 +12,9 @@ from IPy import IP
 from pprint import pprint
 
 
-#########################################################################################
-############################## Utility classes / functions ##############################
-#########################################################################################
+###############################################################################
+######################### Utility classes / functions #########################
+###############################################################################
 
 class ParseError(Exception):
     """
@@ -31,25 +31,27 @@ def responds_to(thing, method):
     return callable(getattr(thing, method, None))
 
 
-_REF_CHAR = '@'
 def as_ref(thing):
     """
     Converts THING to a variable reference by prepending the variable
     reference character.
 
     Raises a ParseError if it is unable to create a variable reference.
+    ref_char = '@'
     """
     if not responds_to(thing, 'startswith'):
-        message = 'Cannot create a variable reference from %r, no startswith() method!'
+        message = 'Cannot create a variable reference from %r, '
+        message += 'no startswith() method!'
         message = message % thing
         raise ParseError(message)
-    if thing.startswith(_REF_CHAR):
+    if thing.startswith(ref_char):
         return thing.lower()
     try:
-        return _REF_CHAR + thing.lower()
+        return ref_char + thing.lower()
     except TypeError:
-        message = 'Cannot create a variable reference from %r, could not prepend %s!'
-        message = message % (thing, _REF_CHAR)
+        message = 'Cannot create a variable reference from %r, '
+        message += 'could not prepend %s!'
+        message = message % (thing, ref_char)
         raise ParseError(message)
 
 
@@ -58,7 +60,7 @@ def uniq(lst):
     Return a list of the unique elements of LST, preserving order.
     """
     seen = {}
-    return [ seen.setdefault(x,x) for x in lst if x not in seen ]
+    return [seen.setdefault(x, x) for x in lst if x not in seen]
 
 
 def wrap(value):
@@ -87,13 +89,13 @@ class SGLexer(object):
     # name lookup in a function. This approach greatly reduces the number of
     # regular expression rules and is likely to make things a little faster."
     _reserved = {
-        'FROM'  : 'FROM',
-        'TO'    : 'TO',
-        'GROUP' : 'GROUP',
-        'tcp'   : 'PROTO',
-        'udp'   : 'PROTO',
-        'icmp'  : 'PROTO',
-        }
+        'FROM':  'FROM',
+        'TO':    'TO',
+        'GROUP': 'GROUP',
+        'tcp':   'PROTO',
+        'udp':   'PROTO',
+        'icmp':  'PROTO',
+    }
 
     # List of token types. This is required by ply.lex in order to determine
     # which tokens are valid. The variable *must* be named 'tokens' because of
@@ -104,7 +106,7 @@ class SGLexer(object):
         'CIDR',
         'RANGE',
         'VARREF',
-        ] + _reserved.values())
+    ] + _reserved.values())
 
     # Literal characters that will be treated as tokens. Literals must be
     # single characters only; if you want a multiple-character "literal"
@@ -152,7 +154,7 @@ class SGLexer(object):
     # regular expressions because there is no additional processing/action
     # required to tokenize them.
     t_ignore_COMMENT = r'\#.*'
-    t_ignore         = ' \t'
+    t_ignore = ' \t'
 
     # Variable references are an @ sign followed by an identifier. The token
     # value will the matched string representing the variable reference.
@@ -235,11 +237,11 @@ class SGParser(object):
         """
         Initialize the parser.
         """
-        self.lexer   = lexer
-        self.tokens  = lexer.tokens
-        self._vars   = {}
+        self.lexer = lexer
+        self.tokens = lexer.tokens
+        self._vars = {}
         self._groups = set()
-        self.parser  = yacc.yacc(module=self, *args, **kwargs)
+        self.parser = yacc.yacc(module=self, *args, **kwargs)
 
     def parse(self, *args, **kwargs):
         """
@@ -301,9 +303,10 @@ class SGParser(object):
         """
         assignment : ASSIGN values
         """
-        name  = as_ref(p[1])
+        name = as_ref(p[1])
         if name in self._vars:
-            message = 'Cannot re-assign variable %s on line %i!' % (name, p.lineno(1))
+            message = 'Cannot re-assign variable %s on line %i!'
+            message = message % (name, p.lineno(1))
             raise ParseError(message)
         self._vars[name] = p[2]
         p[0] = []
@@ -325,8 +328,8 @@ class SGParser(object):
         if p[6] == '*':
             p[6] = self._groups
         p[0] = {'source': p[2],
-                'proto' : p[3],
-                'range' : p[4],
+                'proto': p[3],
+                'range': p[4],
                 'destination': p[6]}
         for key, value in p[0].iteritems():
             p[0][key] = wrap(value)
