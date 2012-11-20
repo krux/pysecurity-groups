@@ -75,11 +75,12 @@ def wrap(value):
     return value
 
 
-###################################################################
-############################## Lexer ##############################
-###################################################################
+###############################################################################
+#################################### Lexer ####################################
+###############################################################################
 
 class SGLexer(object):
+    # pylint: disable=C0103,R0201
     """
     Lexer for the pysecurity-groups policy file format.
     """
@@ -167,8 +168,8 @@ class SGLexer(object):
     # We use the function form of rule specification in order to strip the
     # equals sign from the resulting token value, which will be a string
     # representing the variable name we're assigning to.
-    @lex.TOKEN(r'(?i)' + _identifier_re + '\s*=')
-    def t_ASSIGN(self, t):
+    @lex.TOKEN(r'(?i)' + _identifier_re + r'\s*=')
+    def t_ASSIGN(self, t):      # pylint: disable=C0111
         t.value = t.value.rstrip('=').strip()
         return t
 
@@ -179,7 +180,7 @@ class SGLexer(object):
     # string representing the matched reserved word, or the matched
     # identifier.
     @lex.TOKEN(r'(?i)' + _identifier_re)
-    def t_ID(self, t):
+    def t_ID(self, t):      # pylint: disable=C0111
         t.type = self._reserved.get(t.value, 'ID')
         return t
 
@@ -219,16 +220,17 @@ class SGLexer(object):
         t.lexer.lineno += len(t.value)
 
     # Rudimentary error handling. Print a message and then skip a character.
-    def t_error(self, t):
+    def t_error(self, t):      # pylint: disable=C0111
         print "Illegal character '%s'" % t.value[0]
         t.lexer.skip(1)
 
 
-####################################################################
-############################## Parser ##############################
-####################################################################
+################################################################################
+#################################### Parser ####################################
+################################################################################
 
 class SGParser(object):
+    # pylint: disable=C0103,R0201
     """
     Parser for the pysecurity-groups policy file format.
     """
@@ -476,31 +478,8 @@ class SGParser(object):
     # If we encounter a parsing error, print an error message.
     #
     # XXX: Replace this with logging.
-    def p_error(self, p):
+    def p_error(self, p):      # pylint: disable=C0111
         if p:
             print("Syntax error at '%s'" % p.value)
         else:
             print("Syntax error at EOF")
-
-
-#####################################################################
-############################## Testing ##############################
-#####################################################################
-if __name__ == '__main__':
-    with open('../krux.conf', 'r') as policy:
-        raw = policy.read()
-
-    print '=' * 80
-    lexer = SGLexer(raw)
-    for token in lexer:
-        print token
-    print '=' * 80
-
-    print '=' * 80
-    parser = SGParser(lexer)
-    # rules = parser.parse(raw, debug=1)
-    rules = parser.parse(raw)
-    # pprint(parser._vars, indent=4)
-    # pprint(parser._groups, indent=4)
-    pprint(rules, indent=4)
-    print '=' * 80
