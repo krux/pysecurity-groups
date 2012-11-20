@@ -8,3 +8,4 @@
 *.pyc
 /pysecurity_groups/parser.out
 /pysecurity_groups/parsetab.py
+.dir-locals.el
