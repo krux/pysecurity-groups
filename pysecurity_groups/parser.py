@@ -36,8 +36,8 @@ def as_ref(thing):
     reference character.
 
     Raises a ParseError if it is unable to create a variable reference.
-    ref_char = '@'
     """
+    ref_char = '@'
     if not responds_to(thing, 'startswith'):
         message = 'Cannot create a variable reference from %r, '
         message += 'no startswith() method!'
