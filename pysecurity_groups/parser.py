@@ -53,7 +53,7 @@ class SGLexer(object):
     # *must* be named 'literals' because of magic :-(
     literals = '*,'
 
-    def __init__(self, data, **kwargs):
+    def __init__(self, data='', **kwargs):
         """
         Initialize the lexer.
         """
@@ -65,6 +65,12 @@ class SGLexer(object):
         Proxy to the lexer for iteration.
         """
         return self.lexer
+
+    def input(self, data):
+        """
+        Proxy to the lexer for lexing new input data.
+        """
+        self.lexer.input(data)
 
     #############################
     # Regex Snippets For Tokens #
