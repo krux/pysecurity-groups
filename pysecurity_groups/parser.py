@@ -19,7 +19,7 @@ from pysecurity_groups.exceptions import ParseError
 ###############################################################################
 
 class SGLexer(object):
-    # pylint: disable=C0103,R0201
+    # pylint: disable=C0103,R0201,C0111
     """
     Lexer for the pysecurity-groups policy file format.
     """
@@ -108,7 +108,7 @@ class SGLexer(object):
     # equals sign from the resulting token value, which will be a string
     # representing the variable name we're assigning to.
     @lex.TOKEN(r'(?i)' + _identifier_re + r'\s*=')
-    def t_ASSIGN(self, t):      # pylint: disable=C0111
+    def t_ASSIGN(self, t):
         t.value = t.value.rstrip('=').strip()
         return t
 
@@ -119,13 +119,14 @@ class SGLexer(object):
     # string representing the matched reserved word, or the matched
     # identifier.
     @lex.TOKEN(r'(?i)' + _identifier_re)
-    def t_ID(self, t):      # pylint: disable=C0111
+    def t_ID(self, t):
         t.type = self._reserved.get(t.value, 'ID')
         return t
 
     # CIDR identifiers. The token value will be an IP object.
     def t_CIDR(self, t):
         # This is a beast. Cobbled together from google searches.
+        # pylint: disable=C0301
         r'\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\/(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))?\b'
         t.value = IP(t.value)
         return t
@@ -159,7 +160,7 @@ class SGLexer(object):
         t.lexer.lineno += len(t.value)
 
     # Rudimentary error handling. Print a message and then skip a character.
-    def t_error(self, t):      # pylint: disable=C0111
+    def t_error(self, t):
         print "Illegal character '%s'" % t.value[0]
         t.lexer.skip(1)
 
@@ -169,7 +170,7 @@ class SGLexer(object):
 ################################################################################
 
 class SGParser(object):
-    # pylint: disable=C0103,R0201
+    # pylint: disable=C0103,R0201,C0111
     """
     Parser for the pysecurity-groups policy file format.
     """
@@ -417,7 +418,7 @@ class SGParser(object):
     # If we encounter a parsing error, print an error message.
     #
     # XXX: Replace this with logging.
-    def p_error(self, p):      # pylint: disable=C0111
+    def p_error(self, p):
         if p:
             print("Syntax error at '%s'" % p.value)
         else:
