@@ -9,7 +9,6 @@
 import ply.lex as lex
 import ply.yacc as yacc
 from IPy import IP
-from pprint import pprint
 
 
 ###############################################################################
