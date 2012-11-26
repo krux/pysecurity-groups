@@ -6,6 +6,12 @@
 
 """Utility classes / functions for pysecurity-groups"""
 
+from pysecurity_groups.exceptions import ParseError
+
+
+REF_CHAR = '@'
+
+
 def as_ref(thing):
     """
     Converts THING to a variable reference by prepending the variable
@@ -13,21 +19,12 @@ def as_ref(thing):
 
     Raises a ParseError if it is unable to create a variable reference.
     """
-    ref_char = '@'
     if not responds_to(thing, 'startswith'):
-        message = 'Cannot create a variable reference from %r, '
-        message += 'no startswith() method!'
-        message = message % thing
-        raise ParseError(message)
-    if thing.startswith(ref_char):
-        return thing.lower()
-    try:
-        return ref_char + thing.lower()
-    except TypeError:
-        message = 'Cannot create a variable reference from %r, '
-        message += 'could not prepend %s!'
-        message = message % (thing, ref_char)
-        raise ParseError(message)
+        thing = str(thing)
+    thing = thing.lower()
+    if thing.startswith(REF_CHAR):
+        return thing
+    return REF_CHAR + thing
 
 
 def responds_to(thing, method):
