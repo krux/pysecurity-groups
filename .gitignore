@@ -11,3 +11,5 @@
 .dir-locals.el
 .coverage
 krux.conf
+/parser.out
+/parsetab.py
