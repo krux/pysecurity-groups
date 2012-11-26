@@ -145,8 +145,6 @@ class SGLexer(object):
     # representing a range, or an int representing the port or type.
     def t_RANGE(self, t):
         r'([\d]+(:[\d]+)?)'
-        if t.value == '*':
-            return t
         sep = ':'
         if sep in t.value:
             start, _, end = t.value.partition(sep)
