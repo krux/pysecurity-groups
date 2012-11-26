@@ -137,18 +137,15 @@ class SGLexer(object):
         t.value = IP(t.value)
         return t
 
-    # Range tokens represent TCP ports or ICMP types/codes. They can be an
-    # asterisk, a single integer representing the port or type, or a
-    # colon-separated string representing start_port:end_port or type:code.
+    # Range tokens represent TCP ports or ICMP types/codes. They can be single
+    # integer representing the port or type, or a colon-separated string
+    # representing start_port:end_port or type:code.
     #
-    # The token value will be either '*', a dict with 'start' and 'end' keys
+    # The token value will be either a dict with 'start' and 'end' keys
     # representing a range, or an int representing the port or type.
     def t_RANGE(self, t):
-        r'\*|([\d]+(:[\d]+)?)'
-        if '*' in t.value and len(t.value) > 1:
-            message = 'Invalid use of * in a range specifier at line %i!'
-            raise ParseError(message % t.lexer.lineno)
-        elif t.value == '*':
+        r'([\d]+(:[\d]+)?)'
+        if t.value == '*':
             return t
         sep = ':'
         if sep in t.value:
@@ -165,10 +162,11 @@ class SGLexer(object):
         r'\n+'
         t.lexer.lineno += len(t.value)
 
-    # Rudimentary error handling. Print a message and then skip a character.
+    # Raise a ParseError if we hit an error while tokenizing.
+    #
+    # XXX: Replace with logging?
     def t_error(self, t):
-        print "Illegal character '%s'" % t.value[0]
-        t.lexer.skip(1)
+        raise ParseError("Illegal character '%s'" % t.value[0])
 
 
 ################################################################################
@@ -180,12 +178,12 @@ class SGParser(object):
     """
     Parser for the pysecurity-groups policy file format.
     """
-    def __init__(self, lexer, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Initialize the parser.
         """
-        self.lexer = lexer
-        self.tokens = lexer.tokens
+        self.lexer = SGLexer()
+        self.tokens = self.lexer.tokens
         self._vars = {}
         self._groups = set()
         self.parser = yacc.yacc(module=self, *args, **kwargs)
@@ -194,7 +192,8 @@ class SGParser(object):
         """
         Proxy to the parser's parse method.
         """
-        return {'groups': self._groups,
+        return {'variables': self._vars,
+                'groups': self._groups,
                 'rules': self.parser.parse(*args, **kwargs)}
 
     def resolve(self, name, p):
@@ -328,12 +327,11 @@ class SGParser(object):
         """
         p[0] = self.resolve(as_ref(p[1]), p)
 
-    # (see previous rule) ... or a value can be one of: a CIDR, a literal
-    # asterisk, an ID, a RANGE, or a PROTO.
+    # (see previous rule) ... or a value can be one of: a CIDR, an ID, a
+    # RANGE, or a PROTO.
     def p_value(self, p):
         """
         value : CIDR
-              | '*'
               | ID
               | RANGE
               | PROTO
@@ -359,21 +357,20 @@ class SGParser(object):
                | CIDR
                | ID
         """
-        p[0] = p[1]
+        # We can't do comparison between IP objects and strings (an exception
+        # is raised) so we check to see if the object looks like an IP object
+        # (it responds to the prefixlen() method) before we try to
+        # compare. Yay for short-circuiting boolean operators!
+        if not responds_to(p[1], 'prefixlen') and p[1] == '*':
+            p[0] = IP('0.0.0.0/0')
+        else:
+            p[0] = p[1]
 
     ### End "source" rules
 
     ### Begin "protocol" rules
 
-    # A protocol can be a variable reference, in which case we look up the
-    # variable and substitute its value... (see next rule)
-    def p_protocol_varref(self, p):
-        """
-        protocol : VARREF
-        """
-        p[0] = self.resolve(as_ref(p[1]), p)
-
-    # (see previous rule) ... or a PROTO token.
+    # A protocol can only be a PROTO token.
     def p_protocol(self, p):
         """
         protocol : PROTO
@@ -421,11 +418,12 @@ class SGParser(object):
 
     ### End "destination" rules
 
-    # If we encounter a parsing error, print an error message.
+    # If we encounter a parsing error, raise an exception.
     #
-    # XXX: Replace this with logging.
+    # XXX: Replace this with logging?
     def p_error(self, p):
         if p:
-            print("Syntax error at '%s'" % p.value)
+            message = "Syntax error at '%s', line %i" % (p.value, p.lineno)
+            raise ParseError(message)
         else:
-            print("Syntax error at EOF")
+            raise ParseError("Unexpected EOF during parsing.")
