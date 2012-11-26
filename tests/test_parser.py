@@ -31,7 +31,7 @@ class TestLexer(object):
 
     def test_comment(self):
         """
-        Ensure that the lexer ignores comments.
+        The lexer ignores comments.
         """
         input_text = '# This is a comment.'
         self.lexer.input(input_text)
@@ -39,9 +39,9 @@ class TestLexer(object):
 
     def test_whitespace(self):
         """
-        Ensure that the lexer ignores whitespace. The input_text here includes
-        space characters and literal tabs.
+        The lexer ignores whitespace.
         """
+        # The input_text here includes space characters and literal tabs.
         input_text = """
 
             """
@@ -50,7 +50,7 @@ class TestLexer(object):
 
     def test_varref(self):
         """
-        Ensure that the lexer properly tokenizes variable references.
+        The lexer properly tokenizes variable references.
         """
         input_text = '@this_is_a_variable @SO_IS_THIS '
         input_text += '@Mixed_CASE_too @AND_numbers_1234'
@@ -59,7 +59,7 @@ class TestLexer(object):
 
     def test_assign(self):
         """
-        Ensure that the lexer properly tokenizes assignment statements.
+        The lexer properly tokenizes assignment statements.
         """
         input_text = 'variable_name = value'
         self.lexer.input(input_text)
@@ -72,8 +72,7 @@ class TestLexer(object):
 
     def test_id(self):
         """
-        Ensure that the lexer properly tokenizes reserved words and general
-        identifiers.
+        The lexer properly tokenizes reserved words and identifiers.
         """
         input_text = 'FROM TO GROUP tcp udp icmp'
         expected = [('FROM', 'FROM'),
@@ -88,7 +87,7 @@ class TestLexer(object):
 
     def test_cidr(self):
         """
-        Ensure that the lexer properly tokenizes CIDR ranges.
+        The lexer properly tokenizes CIDR ranges.
         """
         input_text = '0.0.0.0/0 192.168.0.0 10.0.0.0/8 8.8.8.8 192.168.252.0/24'
         expected = [('CIDR', IP(cidr)) for cidr in input_text.split()]
@@ -98,8 +97,7 @@ class TestLexer(object):
 
     def test_range(self):
         """
-        Ensure that the lexer properly tokenizes range specifiers
-        (representing a range of tcp ports or an icmp type:code pair)
+        The lexer properly tokenizes range specifiers.
         """
         input_text = '* 5555:5560 22 1:4'
         expected = [('*', '*'),
@@ -123,7 +121,7 @@ class TestParser(object):
 
     def test_assignment(self):
         """
-        Ensure that the parser properly parses variable assignments.
+        The parser properly parses variable assignments.
         """
         input_text = '''
         ssh = 22
@@ -142,7 +140,7 @@ class TestParser(object):
 
     def test_assignment_recursive(self):
         """
-        Ensure that the parser properly parses recursive variable assignments.
+        The parser properly parses recursive variable assignments.
         """
         input_text = '''
         http-ports = 80, 8080
@@ -157,7 +155,7 @@ class TestParser(object):
 
     def test_duplicate_assignment(self):
         """
-        Ensure that the parser raises an error on duplicate assignment.
+        The parser raises an error on duplicate assignment.
         """
         input_text = '''
         some-port = 1234
@@ -167,22 +165,21 @@ class TestParser(object):
 
     def test_invalid_variable_name(self):
         """
-        Ensure that the parser raises an error for invalid variable names.
+        The parser raises an error for invalid variable names.
         """
         input_text = '1invalid-name = 1234'
         assert_raises(ParseError, self.parser.parse, input_text)
 
     def test_malformed_assignment(self):
         """
-        Ensure that the parser raises an error for malformed assignment
-        statements.
+        The parser raises an error for malformed assignment statements.
         """
         input_text = 'varname = '
         assert_raises(ParseError, self.parser.parse, input_text)
 
     def test_group_declaration(self):
         """
-        Ensure that the parser properly parses group declarations.
+        The parser properly parses group declarations.
         """
         input_text = '''
         GROUP test-group-1
@@ -194,7 +191,7 @@ class TestParser(object):
 
     def test_group_redeclaration(self):
         """
-        Ensure that the parser ignores duplicate group declarations.
+        The parser ignores duplicate group declarations.
         """
         input_text = '''
         GROUP test-group-1
@@ -207,8 +204,7 @@ class TestParser(object):
 
     def test_rule_source_varref(self):
         """
-        Ensure that the parser properly parses variable references as source
-        specifiers for rule declarations.
+        The parser properly parses variable references as sources.
         """
         input_text = '''
         anywhere = 0.0.0.0/0
@@ -223,8 +219,7 @@ class TestParser(object):
 
     def test_rule_source_wildcard(self):
         """
-        Ensure that the parser properly parses the wildcard character ('*') as
-        the source specifier for a rule declaration.
+        The parser properly parses the '*' as a wild card source.
         """
         input_text = '''
         FROM * tcp 22 TO test-group
@@ -238,8 +233,7 @@ class TestParser(object):
 
     def test_rule_source_cidr(self):
         """
-        Ensure that the parser properly parses a CIDR range as the source
-        specifier for a rule declaration.
+        The parser properly parses a CIDR range as a source.
         """
         input_text = '''
         FROM 10.0.0.0/8 tcp 22 TO test-group
@@ -253,8 +247,7 @@ class TestParser(object):
 
     def test_rule_source_group(self):
         """
-        Ensure that the parser properly parses a group name as the source
-        specifier for a rule declaration.
+        The parser properly parses a group name as a source.
         """
         input_text = '''
         FROM test-group-2 tcp 22 TO test-group-1
@@ -268,8 +261,7 @@ class TestParser(object):
 
     def test_rule_protocol(self):
         """
-        Ensure that the parser properly parses protocol specifiers for rule
-        declarations.
+        The parser properly parses protocol specifiers.
         """
         input_text = '''
         FROM test-group tcp 53 TO dns-servers
@@ -293,8 +285,7 @@ class TestParser(object):
 
     def test_invalid_protocol(self):
         """
-        Ensure that the parser raises an error for invalid protocol specifiers
-        in rule declarations.
+        The parser raises an error for invalid protocol specifiers.
         """
         input_text = '''
         FROM test-group invalid 22 TO test-group
@@ -303,8 +294,7 @@ class TestParser(object):
 
     def test_range_varref(self):
         """
-        Ensure that the parser properly parses variable references as range
-        specifiers for rule declarations.
+        The parser properly parses variable references as ranges.
         """
         input_text = '''
         ping = 8:0
@@ -319,8 +309,7 @@ class TestParser(object):
 
     def test_range(self):
         """
-        Ensure that the parser properly parses range tokens as range
-        specifiers for rule declarations.
+        The parser properly parses range tokens as ranges.
         """
         input_text = '''
         FROM test-group icmp 8:0 TO test-group
@@ -335,8 +324,7 @@ class TestParser(object):
 
     def test_invalid_range(self):
         """
-        Ensure that the parser raises an error for invalid range specifiers in
-        rule declarations.
+        The parser raises an error for invalid range specifiers.
         """
         input_text = '''
         FROM test-group icmp invalid TO test-group
@@ -345,8 +333,7 @@ class TestParser(object):
 
     def test_destination_varref(self):
         """
-        Ensure that the parser properly parses variable references as range
-        specifiers for rule declarations.
+        The parser properly parses variable references as ranges.
         """
         input_text = '''
         dns-servers = 10.0.0.1, 10.0.0.2,
@@ -361,8 +348,7 @@ class TestParser(object):
 
     def test_destination_wildcard(self):
         """
-        Ensure that the parser properly parses the wildcard character ('*') as
-        a destination specifier in rule declarations.
+        The parser properly parses '*' as a wild card destination.
         """
         input_text = '''
         GROUP test-group-1
@@ -378,8 +364,7 @@ class TestParser(object):
 
     def test_undefined_variable(self):
         """
-        Ensure that the parser raises an error when attempting to resolve a
-        reference to an undefined variable.
+        The parser raises an error for undefined variables.
         """
         input_text = '''
         FROM @undefined tcp 22 TO test-group
