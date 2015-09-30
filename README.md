@@ -1,5 +1,5 @@
 YOU PROBABLY DON'T WANT TO USE THIS. THE CURRENT VERSION IS FATALLY 
-FLAWED*. A REWRITE IS IN-PROGRESS.
+FLAWED*.
 
 * The current version of pysecurity-groups uses an ini-style file
   for configuration, and the ConfigParser library to parse this file.
